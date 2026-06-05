@@ -1,0 +1,24 @@
+# A couple of starter alert rules. Real rules are pipeline/SLA-specific; these prove the wiring.
+groups:
+  - name: de-playground
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Scrape target {{ $labels.job }} is down"
+          description: "{{ $labels.instance }} ({{ $labels.job }}) has been unreachable for 2m."
+
+      - alert: ContainerHighMemory
+        # >90% of the container's memory limit for 5m (cAdvisor)
+        expr: |
+          (container_memory_usage_bytes{name!=""}
+            / container_spec_memory_limit_bytes{name!=""}) > 0.9
+          and container_spec_memory_limit_bytes{name!=""} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} memory > 90%"

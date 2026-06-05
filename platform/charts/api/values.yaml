@@ -1,0 +1,38 @@
+# Default values for the de-playground API chart.
+replicaCount: 2
+
+image:
+  # Phase 5c: pulled from the k3d-managed registry (the kubelet's name for it). `make api-release`
+  # builds, pushes, and rewrites `tag` below to the git short SHA, then commits — Argo CD syncs
+  # that change and rolls out the new image (pull-based CD). `tag` is the GitOps record of what's
+  # deployed; it starts at `latest` until the first release sets a SHA.
+  repository: k3d-registry.localhost:5111/de-playground-api
+  tag: latest # rewritten to sha-<short> by `make api-release` (do not hand-edit)
+  # SHA tags are immutable, so IfNotPresent is correct + efficient: a new tag is a new pull, an
+  # unchanged tag is never re-fetched. (The moving `:latest` is a human convenience, not deployed.)
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# Environment for the container. ES still runs in docker compose on the HOST, so the
+# cluster reaches it via Docker Desktop's host bridge (k3d's host.k3d.internal isn't injected here). Set OTEL_EXPORTER_OTLP_ENDPOINT to
+# http://host.docker.internal:4317 if the observability profile is up.
+env:
+  ES_URL: "http://host.docker.internal:9200"
+  OTEL_SERVICE_NAME: "de-playground-api-k8s"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+probes:
+  path: /health
+  initialDelaySeconds: 5
+  periodSeconds: 10

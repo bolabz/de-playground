@@ -1,0 +1,29 @@
+# Secrets / config
+.env
+
+# Local data scratch (real data lives in SeaweedFS)
+data/*
+!data/.gitkeep
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS / IDE
+.DS_Store
+.idea/
+
+# OpenTofu / Terraform (commit .terraform.lock.hcl once generated; never state or providers)
+platform/tofu/.terraform/
+*.tfstate
+*.tfstate.*

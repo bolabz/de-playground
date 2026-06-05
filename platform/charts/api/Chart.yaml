@@ -1,0 +1,6 @@
+apiVersion: v2
+name: de-playground-api
+description: FastAPI serving layer for the de-playground sales pipeline (reads Elasticsearch)
+type: application
+version: 0.1.0 # chart version (bump on chart changes)
+appVersion: "0.1.0" # app version (tracks pyproject)

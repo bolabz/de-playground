@@ -1,0 +1,21 @@
+# docker-compose.yml — local DE playground (all OSS/free).
+#
+# Modularized with the `include:` directive (each plane is its own file under compose/).
+# Profiles still select what comes up; bring up planes cumulatively:
+#   make up-ingest          # SQL Server + SeaweedFS              (compose/core.yml)
+#   make up-process         # + Spark cluster                    (compose/spark.yml)
+#   make up-serve           # + Elasticsearch, Kibana, FastAPI   (compose/serving.yml)
+#   make up-observability   # OTel + Prometheus + Grafana + ...  (compose/observability.yml)
+#   make up-all             # everything in the 'all' profile
+#
+# Airflow runs on the k3d cluster (Airflow 3, KubernetesExecutor — see platform/), not in this
+# compose. After any change here, validate with:  docker compose config
+#
+# Image tags are pinned with "verify"/EOL notes; see BACKLOG.md for the Spark 4 / Airflow 3 /
+# ES 8.19+ upgrades.
+
+include:
+  - compose/core.yml
+  - compose/spark.yml
+  - compose/serving.yml
+  - compose/observability.yml

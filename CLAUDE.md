@@ -1,0 +1,4 @@
+@AGENTS.md
+@CONTRIBUTING.md
+@docs/ARCHITECTURE.md
+@docs/GLOSSARY.md

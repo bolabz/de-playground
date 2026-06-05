@@ -1,0 +1,59 @@
+# OpenTelemetry Collector — the single telemetry hub.
+#   logs:    tail Docker container logs -> Elasticsearch (the ELK "L"; explore in Kibana)
+#   metrics: receive OTLP from apps (FastAPI, etc.) -> expose for Prometheus to scrape (:8889)
+#   traces:  receive OTLP -> debug log for now (add a Jaeger/Tempo exporter to persist them)
+# Requires the *-contrib* collector image (filelog receiver + elasticsearch exporter).
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # Docker writes each container's stdout/stderr as JSON lines under this path (json-file driver).
+  filelog:
+    include:
+      - /var/lib/docker/containers/*/*-json.log
+    include_file_path: true
+    operators:
+      - type: json_parser # parse the docker {log,stream,time} envelope
+        timestamp:
+          parse_from: attributes.time
+          layout: "%Y-%m-%dT%H:%M:%S.%LZ"
+
+processors:
+  batch: {}
+  resourcedetection:
+    detectors: [env, system]
+    timeout: 5s
+
+exporters:
+  # --- logs -> Elasticsearch (Kibana = your log explorer) ---
+  elasticsearch:
+    endpoints: ["http://elasticsearch:9200"]
+    logs_index: otel-logs
+
+  # --- metrics -> Prometheus scrapes this endpoint (job: otel-collector) ---
+  prometheus:
+    endpoint: 0.0.0.0:8889
+
+  # --- traces -> logged for now; swap in `otlp/jaeger` or `otlp/tempo` to persist ---
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    logs:
+      receivers: [filelog, otlp]
+      processors: [resourcedetection, batch]
+      exporters: [elasticsearch]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

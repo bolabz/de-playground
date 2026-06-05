@@ -1,0 +1,110 @@
+# Values for the OFFICIAL apache-airflow/airflow chart (1.19.x, Airflow 3) on the k3d cluster.
+# Deployed by OpenTofu (platform/tofu/airflow.tf). This retires the EOL Airflow 2.x compose.
+#
+# Topology: KubernetesExecutor — no resident workers; every task runs as its own pod using
+# the custom image below (built by `make airflow3-image`, which also imports it into k3d).
+# DAGs arrive via git-sync from the repo's `dags/` folder: push to main = DAG update.
+
+executor: KubernetesExecutor
+
+# Custom image: Airflow 3 + JDK17 + ODBC + the pipeline venv with de_playground baked in.
+# images.pod_template MUST also be set — it's what KubernetesExecutor TASK pods run, and it
+# does NOT inherit images.airflow (caught by rendering: defaults to stock apache/airflow,
+# which lacks the pipeline venv and would fail every task).
+images:
+  airflow:
+    repository: de-playground-airflow3
+    tag: k8s
+    pullPolicy: IfNotPresent # loaded via `k3d image import`, never pulled
+  pod_template:
+    repository: de-playground-airflow3
+    tag: k8s
+    pullPolicy: IfNotPresent
+
+# DAGs from git — the GitOps story for the control plane itself.
+dags:
+  gitSync:
+    enabled: true
+    repo: https://github.com/bolabz/de-playground.git
+    branch: main
+    subPath: dags
+    period: 60s
+
+# Pipeline config for ALL airflow containers incl. task pods. The data services still run in
+# docker compose on the HOST; task pods reach them via Docker Desktop's host bridge (k3d's host.k3d.internal isn't injected here).
+# NOTE: values must match your local .env (these are the LOCAL-ONLY placeholders).
+env:
+  - name: MSSQL_HOST
+    value: host.docker.internal
+  - name: MSSQL_DB
+    value: WideWorldImporters
+  - name: MSSQL_APP_USER
+    value: de_extract
+  - name: MSSQL_APP_PASSWORD
+    value: Change_me_app_passw0rd
+  - name: S3_ENDPOINT_URL
+    value: http://host.docker.internal:8333
+  - name: S3_ACCESS_KEY
+    value: appaccesskey
+  - name: S3_SECRET_KEY
+    value: appsecretkey
+  - name: ES_URL
+    value: http://host.docker.internal:9200
+  # Cap the local-mode Spark DRIVER heap for the transform task. In client/local mode the JVM is
+  # already running by the time the builder applies config, so `spark.driver.memory` is ignored —
+  # spark-submit reads SPARK_DRIVER_MEMORY at JVM launch instead. Without this the driver sizes
+  # -Xmx to ~1/4 of the whole node and gets OOM-killed on the shared Docker Desktop VM. 2g is
+  # plenty for WWI (largest table ~230k rows); the task pod limit (workers.resources) must cover
+  # this heap + ~1g of JVM overhead (metaspace, off-heap, Python).
+  - name: SPARK_DRIVER_MEMORY
+    value: 2g
+
+# Remote task logging to SeaweedFS (S3). KubernetesExecutor deletes task pods when they finish,
+# so the UI can't stream live logs from a gone pod ("Could not read served logs"). Remote
+# logging persists each task's log to object storage so it's readable after the pod dies — the
+# production answer for ephemeral compute. Logs land in the existing `bronze` bucket under a
+# prefix (the app S3 identity can write there). Needs apache-airflow-providers-amazon in the
+# image (see platform/airflow/Dockerfile).
+config:
+  logging:
+    remote_logging: "True"
+    remote_base_log_folder: "s3://bronze/airflow-logs"
+    remote_log_conn_id: "aws_s3"
+
+# The S3 connection, as a JSON conn in an env var. endpoint_url points at SeaweedFS via the
+# host bridge; path-style addressing is what SeaweedFS needs (same as the pipeline's boto3).
+extraEnv: |
+  - name: AIRFLOW_CONN_AWS_S3
+    value: '{"conn_type":"aws","login":"appaccesskey","password":"appsecretkey","extra":{"endpoint_url":"http://host.docker.internal:8333","config_kwargs":{"s3":{"addressing_style":"path"}}}}'
+
+# Keep the local footprint sane (32GB host shared with the compose stack).
+# Login: the chart's createUserJob defaults already create admin/admin (LOCAL-ONLY).
+# api-server got OOMKilled on the shared machine -> task state reporting failed -> false task
+# failures + retries. Give it headroom.
+apiServer:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+# KubernetesExecutor TASK pods are sized from workers.resources (the default pod-template's
+# `base` container reads this — there are no resident workers). The transform task runs a Spark
+# driver JVM here, so give it a hard budget: limit = SPARK_DRIVER_MEMORY (2g) + ~1.5g JVM overhead.
+# The cpu limit also caps Java's view of available processors (JDK17 is cgroup-aware), so
+# local[*] uses ~2 threads instead of every node core — less concurrent memory. Sized for a 16Gi
+# Docker Desktop VM shared with the compose data stack.
+workers:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 2Gi
+    limits:
+      cpu: "2"
+      memory: 3584Mi # 3.5Gi
+scheduler:
+  replicas: 1
+triggerer:
+  replicas: 1
+statsd:
+  enabled: false # we have our own observability stack

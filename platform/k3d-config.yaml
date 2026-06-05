@@ -1,0 +1,34 @@
+# k3d cluster for the Phase 5 platform track: 1 server + 2 agents, all as Docker containers.
+# Create/delete:  make platform-up  /  make platform-down   (the compose stack is unaffected).
+#
+# The cluster reaches services running in docker compose on your host (Elasticsearch, the
+# lake) via the Docker Desktop host name `host.docker.internal` — that's the hybrid bridge while the
+# data services stay in compose.
+#
+# apiVersion v1alpha5 = k3d v5.x config schema (verify against your `k3d version`).
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: de-playground
+servers: 1
+agents: 2
+options:
+  k3d:
+    wait: true
+    timeout: "120s"
+
+# Phase 5c: a k3d-managed image registry — real push/pull instead of `k3d image import`.
+# k3d creates the registry container AND wires the cluster's containerd to pull from it, all from
+# `make platform-up`. The registry has TWO names for the SAME store (k3d prefixes managed
+# resources with `k3d-`):
+#   * push from your host                  ->  localhost:5111
+#   * the kubelet pulls / chart image ref  ->  k3d-registry.localhost:5111
+# Only the repository path matters, so pushing via localhost and pulling via the k3d- name hit the
+# same image (no /etc/hosts edit needed on macOS). Port 5111, not 5000 (macOS Control Center
+# squats on 5000). A cluster *recreate* (platform-down/up) gives a fresh EMPTY registry — re-run
+# `make api-release`. See README "Phase 5c" + TROUBLESHOOTING.
+registries:
+  create:
+    name: registry.localhost
+    host: "0.0.0.0"
+    hostPort: "5111"
