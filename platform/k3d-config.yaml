@@ -1,0 +1,18 @@
+# k3d cluster for the Phase 5 platform track: 1 server + 2 agents, all as Docker containers.
+# Create/delete:  make platform-up  /  make platform-down   (the compose stack is unaffected).
+#
+# The cluster reaches services running in docker compose on your host (Elasticsearch, the
+# lake) via the special DNS name `host.k3d.internal` — that's the hybrid bridge while the
+# data services stay in compose.
+#
+# apiVersion v1alpha5 = k3d v5.x config schema (verify against your `k3d version`).
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: de-playground
+servers: 1
+agents: 2
+options:
+  k3d:
+    wait: true
+    timeout: "120s"

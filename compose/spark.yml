@@ -1,0 +1,66 @@
+# Processing plane: the standalone Spark cluster + the spark-submit driver.
+# Custom image (../spark/Dockerfile) bakes in the Delta + S3A jars. Paths are relative to
+# this file (compose/), so repo-root dirs are ../<dir>.
+# NOTE: `make transform` runs LOCAL Spark and does NOT need this cluster; the cluster +
+# `make cluster-transform` is the "feel distributed" exercise.
+networks:
+  de:
+
+services:
+  spark-master:
+    build: ../spark
+    image: de-playground-spark:local
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      SPARK_NO_DAEMONIZE: "true"
+    ports:
+      - "8080:8080" # Spark master UI — WATCH tasks distribute across workers here
+      - "7077:7077" # cluster submit port
+    networks: [de]
+    profiles: ["process", "serve", "all"]
+
+  spark-worker:
+    build: ../spark
+    image: de-playground-spark:local
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      SPARK_NO_DAEMONIZE: "true"
+      SPARK_WORKER_MEMORY: "2G"
+      SPARK_WORKER_CORES: "2"
+    depends_on: [spark-master]
+    networks: [de]
+    profiles: ["process", "serve", "all"]
+
+  # spark-submit into the cluster (client mode). Run on demand: make cluster-transform.
+  # Inside the de network, endpoints are SERVICE NAMES (seaweedfs, spark-master), not localhost.
+  spark-submit:
+    build: ../spark
+    image: de-playground-spark:local
+    hostname: spark-submit # executors call the driver back at this name
+    depends_on: [spark-master, seaweedfs]
+    environment:
+      SPARK_MASTER_URL: "spark://spark-master:7077"
+      S3_ENDPOINT_URL: "http://seaweedfs:8333"
+      S3_ACCESS_KEY: "appaccesskey" # least-privilege app identity (no Admin)
+      S3_SECRET_KEY: "appsecretkey"
+    volumes:
+      - ../dist:/app/dist:ro # the de_playground wheel (built by `make wheel`)
+      - ../jobs:/app/jobs:ro # the spark-submit entry script
+    networks: [de]
+    profiles: ["submit"]
+    command:
+      - /opt/spark/bin/spark-submit
+      - --master
+      - spark://spark-master:7077
+      - --deploy-mode
+      - client
+      - --conf
+      - spark.driver.host=spark-submit
+      - --conf
+      - spark.driver.bindAddress=0.0.0.0
+      - --py-files
+      - /app/dist/de_playground-0.1.0-py3-none-any.whl
+      - /app/jobs/transform_cluster.py
+      - all

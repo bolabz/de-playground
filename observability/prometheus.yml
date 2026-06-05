@@ -1,0 +1,44 @@
+# Prometheus — scrape service/infra metrics + route alerts to Alertmanager.
+# Targets are resolved by service name on the `de` network; a target that's down just shows
+# as DOWN (the TargetDown alert fires), which is fine — observability runs alongside any phase.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+rule_files:
+  - /etc/prometheus/rules.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: otel-collector # app metrics arriving via OTLP (FastAPI, optional Airflow)
+    static_configs:
+      - targets: ["otel-collector:8889"]
+
+  - job_name: cadvisor # per-container CPU/mem/io
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  - job_name: node-exporter # host/VM metrics
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  - job_name: elasticsearch
+    static_configs:
+      - targets: ["elasticsearch-exporter:9114"]
+
+  - job_name: seaweedfs # SeaweedFS exposes Prometheus metrics on its metricsPort
+    static_configs:
+      - targets: ["seaweedfs:9091"]
+
+  - job_name: spark-master # PrometheusServlet sink (only up during the process profile)
+    metrics_path: /metrics/prometheus
+    static_configs:
+      - targets: ["spark-master:8080"]

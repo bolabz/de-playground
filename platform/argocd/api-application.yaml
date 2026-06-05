@@ -1,0 +1,31 @@
+# Argo CD Application: the GitOps contract for the API.
+# Argo watches the repo and keeps the cluster synced to platform/charts/api — push = deploy.
+#
+# SET ME: repoURL must point at YOUR git remote (Argo pulls from git, not your working tree).
+# Until the repo is pushed somewhere reachable, use `make api-deploy` (direct helm) instead.
+#
+# Applied via `make argocd-app` (kubectl, not tofu — the Application CRD only exists after
+# the Argo CD helm release, and tofu's kubernetes_manifest plans against CRDs at plan time).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: de-playground-api
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bolabz/de-playground.git # <-- your remote
+    targetRevision: main
+    path: platform/charts/api
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: de-playground
+  syncPolicy:
+    automated:
+      prune: true # delete resources removed from git
+      selfHeal: true # revert manual drift — git is the source of truth
+    syncOptions:
+      - CreateNamespace=true

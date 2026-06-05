@@ -1,0 +1,44 @@
+# Serving plane: Elasticsearch (derived index) + Kibana + the FastAPI data API.
+# Paths relative to this file (compose/); repo-root dirs are ../<dir>.
+networks:
+  de:
+
+volumes:
+  es-data:
+
+services:
+  # ---------- Elasticsearch  <->  Azure AI Search / Elastic Cloud ----------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0 # see BACKLOG.md (EOL; bump to 8.19/9.x)
+    environment:
+      discovery.type: "single-node"
+      xpack.security.enabled: "false" # LOCAL ONLY — never in production
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g" # cap the heap or it eats your RAM
+    ports: ["9200:9200"]
+    volumes: ["es-data:/usr/share/elasticsearch/data"]
+    networks: [de]
+    profiles: ["serve", "all"]
+
+  # ---------- Kibana  <->  Power BI ----------
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.14.0
+    environment:
+      ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
+    ports: ["5601:5601"]
+    depends_on: [elasticsearch]
+    networks: [de]
+    profiles: ["serve", "all"]
+
+  # ---------- FastAPI  <->  same code on Azure Container Apps / App Service ----------
+  api:
+    build: ../api # holds Dockerfile + main.py
+    environment:
+      ES_URL: "http://elasticsearch:9200"
+      # OpenTelemetry: the API exports traces+metrics+logs to the collector (if it's running).
+      OTEL_SERVICE_NAME: "de-playground-api"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+    ports: ["8000:8000"] # http://localhost:8000/docs for the auto Swagger UI
+    depends_on: [elasticsearch]
+    networks: [de]
+    profiles: ["serve", "all"]

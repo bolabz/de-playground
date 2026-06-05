@@ -1,0 +1,73 @@
+# Core plane: the OLTP source (SQL Server) + the data lake (SeaweedFS).
+# Included by the root docker-compose.yml. Paths are relative to THIS file (compose/).
+networks:
+  de:
+
+volumes:
+  mssql-data:
+  seaweed-data:
+
+configs:
+  seaweed_s3: # static S3 credentials for SeaweedFS (LOCAL-ONLY placeholders)
+    content: |
+      {
+        "identities": [
+          {
+            "name": "admin",
+            "credentials": [
+              { "accessKey": "adminaccesskey", "secretKey": "adminsecretkey" }
+            ],
+            "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+          },
+          {
+            "name": "app",
+            "credentials": [
+              { "accessKey": "appaccesskey", "secretKey": "appsecretkey" }
+            ],
+            "actions": ["Read", "Write", "List", "Tagging"]
+          }
+        ]
+      }
+
+services:
+  # ---------- SOURCE: SQL Server / WideWorldImporters ----------
+  # SQL Server Developer is FREE for dev/test but PROPRIETARY (not OSS). Kept deliberately:
+  # it mirrors the enterprise source (Azure SQL / SQL Server).
+  # platform pin: SQL Server has no arm64 image — Apple Silicon runs it via emulation.
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-Change_me_strong_passw0rd}" # override in .env
+      MSSQL_PID: "Developer"
+      MSSQL_AGENT_ENABLED: "true" # required for CDC capture/cleanup jobs
+    ports: ["1433:1433"]
+    volumes: ["mssql-data:/var/opt/mssql"]
+    networks: [de]
+    profiles: ["ingest", "process", "serve", "all"]
+    # Under Rosetta emulation, SQL Server takes ~30-90s to accept connections on first boot.
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 90s
+
+  # ---------- DATA LAKE: SeaweedFS (S3-compatible)  <->  ADLS Gen2 / OneLake ----------
+  # This IS your "S3" — no cloud account needed. Code writes to s3a://<bucket>/...
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    command: "server -dir=/data -s3 -s3.config=/etc/seaweedfs/s3.json -metricsPort=9091"
+    configs:
+      - source: seaweed_s3
+        target: /etc/seaweedfs/s3.json
+    ports:
+      - "8333:8333" # S3 API   -> Spark/dlt write here (s3a://...)
+      - "8888:8888" # Filer browser (http://localhost:8888)
+      - "9333:9333" # Master UI
+      - "9091:9091" # Prometheus metrics (scraped by the observability profile)
+    volumes: ["seaweed-data:/data"]
+    networks: [de]
+    profiles: ["ingest", "process", "serve", "all"]

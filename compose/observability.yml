@@ -1,0 +1,81 @@
+# Observability plane (opt-in `observability` profile): OTel Collector + Prometheus +
+# Alertmanager + Grafana + exporters. Runs alongside any phase; down targets just show DOWN.
+#   make up-observability  ->  Grafana :3001, Prometheus :9090, Alertmanager :9093
+# Paths relative to this file (compose/); repo-root dirs are ../<dir>.
+networks:
+  de:
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+services:
+  # OTel Collector: container logs -> Elasticsearch (ELK "L"); OTLP in; metrics -> Prometheus.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.119.0 # contrib = filelog + ES exporter; verify tag
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ../observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro # docker json-file logs
+    ports:
+      - "4317:4317" # OTLP gRPC (apps push here)
+      - "4318:4318" # OTLP HTTP
+    networks: [de]
+    profiles: ["observability"]
+
+  prometheus:
+    image: prom/prometheus:v3.1.0 # verify current tag
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ../observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../observability/rules.yml:/etc/prometheus/rules.yml:ro
+      - prometheus-data:/prometheus
+    ports: ["9090:9090"]
+    networks: [de]
+    profiles: ["observability"]
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.0 # verify current tag
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    volumes:
+      - ../observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports: ["9093:9093"]
+    networks: [de]
+    profiles: ["observability"]
+
+  grafana:
+    image: grafana/grafana:11.5.0 # verify current tag
+    environment:
+      GF_SECURITY_ADMIN_USER: "admin"
+      GF_SECURITY_ADMIN_PASSWORD: "admin" # LOCAL-ONLY
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+    volumes:
+      - ../observability/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/ds.yaml:ro
+      - grafana-data:/var/lib/grafana
+    ports: ["3001:3000"] # 3000 is a common conflict; map host 3001
+    depends_on: [prometheus]
+    networks: [de]
+    profiles: ["observability"]
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1 # verify tag; limited on Docker Desktop/Mac
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    networks: [de]
+    profiles: ["observability"]
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2 # verify tag; measures the Linux VM, not macOS host
+    networks: [de]
+    profiles: ["observability"]
+
+  elasticsearch-exporter:
+    image: prometheuscommunity/elasticsearch-exporter:v1.8.0 # verify tag
+    command: ["--es.uri=http://elasticsearch:9200"]
+    networks: [de]
+    profiles: ["observability"]

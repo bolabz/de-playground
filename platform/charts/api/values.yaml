@@ -1,0 +1,34 @@
+# Default values for the de-playground API chart.
+replicaCount: 2
+
+image:
+  repository: de-playground-api
+  tag: k8s
+  # Image is loaded with `make api-image` (k3d image import) — no registry yet, so the
+  # kubelet must NOT try to pull it. Upgrade path: a k3d-managed registry (see BACKLOG).
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# Environment for the container. ES still runs in docker compose on the HOST, so the
+# cluster reaches it via k3d's host bridge DNS. Set OTEL_EXPORTER_OTLP_ENDPOINT to
+# http://host.k3d.internal:4317 if the observability profile is up.
+env:
+  ES_URL: "http://host.k3d.internal:9200"
+  OTEL_SERVICE_NAME: "de-playground-api-k8s"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+probes:
+  path: /health
+  initialDelaySeconds: 5
+  periodSeconds: 10

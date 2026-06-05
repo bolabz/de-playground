@@ -1,0 +1,17 @@
+# Grafana auto-provisioned datasources (mounted at /etc/grafana/provisioning/datasources/).
+# Prometheus for metrics; Elasticsearch for the OTel container logs (so one Grafana sees both).
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+
+  - name: Elasticsearch-logs
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: "otel-logs"
+    jsonData:
+      timeField: "@timestamp"
