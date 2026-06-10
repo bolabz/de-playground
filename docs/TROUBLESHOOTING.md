@@ -157,9 +157,10 @@ the failure and only re-generates on refresh or its ~3-minute poll.
   **no** `k3d-` prefix — SimpleConfig `registries.create` uses the `name:` verbatim, unlike the
   `k3d registry create` CLI). You *push* to `localhost:5111`; don't "fix" the chart to `localhost`
   (the node can't reach its own localhost).
-- **Airflow** (`de-playground-airflow3:k8s`) — still side-loaded via `make airflow3-image`
-  (`k3d image import`); re-run it after a rebuild or a cluster recreate (imports don't survive
-  `platform-down`).
+- **Airflow** (`registry.localhost:5111/de-playground-airflow3:<sha>`) — same registry as the API
+  (Phase 5c). `make registry-ls` shows `de-playground-airflow3` tags too; if missing/empty (e.g.
+  after a cluster recreate), `make airflow3-release` (build → push → bump → `tofu apply`). Same
+  name-match rule as the API: the chart host (`images.*.repository`) must match a `mirrors:` entry.
 
 **`docker push` to the registry fails (`connection refused` / `port 5000 already in use`)**
 The registry binds host port **5111**, not 5000 (macOS Control Center/AirPlay holds 5000 — that's
@@ -175,7 +176,7 @@ Task pods are running the stock Airflow image instead of ours — `images.pod_te
 **Airflow 3 on k3d: DAG missing / stale in the UI**
 DAGs git-sync from the *remote*'s `dags/` folder every 60s — commit + push DAG changes (the
 working tree is invisible to the cluster). Code changes under `src/` are different: they're
-baked into the image, so `make airflow3-image` and re-trigger.
+baked into the image, so `make airflow3-release` and re-trigger.
 
 **`make platform-apply` returns before Airflow is up / first boot looks stuck**
 The release applies with `wait=false`; first boot runs DB-migration + user-creation jobs before
@@ -231,8 +232,8 @@ host.k3d.internal; nslookup host.docker.internal"`.
   `platform/airflow-values.yaml` (the `env` list + the `aws_s3` conn) to `host.docker.internal`,
   then `tofu apply`.
 - If neither resolves → k3d didn't inject the host record. `brew upgrade k3d`, recreate the
-  cluster (`make platform-down && make platform-up`), then `make api-release`/`make airflow3-image`
-  + `make platform-apply` (the registry, imports, and releases don't survive a cluster recreate).
+  cluster (`make platform-down && make platform-up`), then `make platform-apply` +
+  `make api-release`/`make airflow3-release` (the registry's contents don't survive a recreate).
 Whichever name you use, the SeaweedFS/SQL/ES **services must be up** (`make up-data`) — a DNS
 *resolution* failure (`getaddrinfo`) means the name; a *connection refused* means the service.
 

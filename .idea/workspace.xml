@@ -1,15 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="4f92178d-09ba-4dde-a008-879f07bc9468" name="Changes" comment="init commit">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/TROUBLESHOOTING.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/TROUBLESHOOTING.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/platform/charts/api/values.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/platform/charts/api/values.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/platform/k3d-config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/platform/k3d-config.yaml" afterDir="false" />
-    </list>
+    <list default="true" id="4f92178d-09ba-4dde-a008-879f07bc9468" name="Changes" comment="fix(cd): chart image host -&gt; registry.localhost (matches wired mirror)" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -139,7 +131,7 @@
       <workItem from="1780353924509" duration="25568000" />
       <workItem from="1780675888535" duration="8390000" />
       <workItem from="1781058984206" duration="33000" />
-      <workItem from="1781059034426" duration="5014000" />
+      <workItem from="1781059034426" duration="5433000" />
     </task>
     <task id="LOCAL-00001" summary="init commit">
       <option name="closed" value="true" />
@@ -157,7 +149,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781062999017</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="fix(cd): chart image host -&gt; registry.localhost (matches wired mirror)">
+      <option name="closed" value="true" />
+      <created>1781064077624</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1781064077624</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -177,7 +177,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="deploy(api): 42cbf37 [skip ci]" />
     <MESSAGE value="init commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="init commit" />
+    <MESSAGE value="fix(cd): chart image host -&gt; registry.localhost (matches wired mirror)" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix(cd): chart image host -&gt; registry.localhost (matches wired mirror)" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/de_playground$__main__.coverage" NAME="__main__ Coverage Results" MODIFIED="1780231580625" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/de_playground/extract" />

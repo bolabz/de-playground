@@ -386,16 +386,19 @@ artifact, not a mount). This closes the Airflow 2.x EOL item and **replaced** th
 Airflow, which was removed (2026-06-09) — orchestration now lives entirely on the cluster.
 
 ```sh
-make airflow3-image     # wheel -> docker build (platform/airflow/Dockerfile) -> k3d import
-make platform-apply     # tofu adds the airflow namespace + the official chart release
+make airflow3-release   # wheel -> build -> push to registry (Phase 5c) -> bump tags -> tofu apply
 kubectl -n airflow get pods -w    # first boot: migrations job, then components come up
 make airflow3-ui        # -> http://localhost:8082  (admin / admin, LOCAL-ONLY)
 ```
 
+(First-time bring-up: `make platform-apply` once to create the airflow namespace + chart release;
+thereafter `make airflow3-release` re-applies via tofu with the new image tag. The image is pulled
+from the k3d registry like the API — Phase 5c, nothing side-loads.)
+
 Unpause + trigger `wwi_pipeline` and watch `kubectl -n airflow get pods -w`: each task
 materializes as a pod (extract → transform → index), runs, and terminates — that's
 KubernetesExecutor. Task pods reach the compose data services via `host.docker.internal`
-(values must match your `.env`). Code changes need `make airflow3-image` again (the image is
+(values must match your `.env`). Code changes need `make airflow3-release` again (the image is
 the artifact); DAG-only changes just need a push.
 
 How the DAG executes work (design notes):
@@ -441,10 +444,15 @@ Argo reconciles the cluster to it; the rollout is *pull-based*, not a `helm upgr
 a clean tree: the image is tagged with `HEAD`'s SHA, so `api-push` refuses to run with uncommitted
 changes (otherwise the artifact wouldn't match the commit it claims to be).
 
+The **Airflow 3 image** is on the same registry (`make airflow3-release`) — so **nothing
+side-loads** anymore. The difference from the API: Airflow is deployed by OpenTofu/Helm, not Argo,
+so `airflow3-release` ends in a `tofu apply` (the registry is shared; only the *deploy* mechanism
+differs — a deliberate two-pattern contrast). The DAG *code* still git-syncs; the *image* (JDK,
+ODBC, pipeline venv) is the artifact pulled from the registry.
+
 > A cloud-hosted GitHub Actions runner can't reach a `localhost` registry — that's why the CI step
-> runs locally here (via `make`, or `act`). A real registry GitHub can push to is **Phase 5d**
-> (cloud). The Airflow 3 image still uses `k3d image import`; moving it onto this registry is the
-> next 5c step (its deploy is a `tofu apply`, not Argo — a parallel path).
+> runs locally here (via `make`, or `act`). A real registry GitHub can push to, with GH-hosted CI
+> doing the build/push, is **Phase 5d** (cloud).
 
 ## After a machine or Docker restart
 
@@ -478,7 +486,7 @@ things that genuinely don't survive a restart are the `port-forward` processes (
 tunnels), which is why step 3 is always needed.
 
 > A *restart* keeps the registry's images; a full *recreate* (`platform-down` → `platform-up`)
-> gives a fresh empty registry, so re-run `make api-release` (API) and `make airflow3-image`
+> gives a fresh empty registry, so re-run `make api-release` (API) and `make airflow3-release`
 > (Airflow) after recreating.
 
 > **`make platform-up` vs `make platform-start`:** `platform-up` runs `k3d cluster create` and

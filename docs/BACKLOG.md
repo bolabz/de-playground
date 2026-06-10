@@ -50,11 +50,11 @@ Recommended order: ES first (smallest blast radius), Spark second, Airflow third
   Remaining increments:
   - **5b — Airflow 3 via official Helm chart on k3d** — ✅ done 2026-06-09 (KubernetesExecutor;
     absorbed the P1 Airflow EOL fix and retired the compose Airflow).
-  - **5c — k3d-managed registry instead of `k3d image import`** (real push/pull), then CI
-    builds the image + bumps the chart tag = full CD loop. ⏳ *in progress:* API done
-    (registry in `k3d-config.yaml`; `make api-push`/`api-release` → Argo pull-based rollout,
-    2026-06-09). **Next:** move the Airflow 3 image onto the same registry (its bump is a
-    `tofu apply`, not Argo); optional `act`-driven release to mimic GH Actions locally.
+  - **5c — k3d-managed registry instead of `k3d image import`** — ✅ done 2026-06-09. Registry in
+    `k3d-config.yaml`; **API** via `make api-push`/`api-release` → Argo pull-based rollout;
+    **Airflow** via `make airflow3-push`/`airflow3-release` → `tofu apply` (same registry, deploy
+    differs). Nothing side-loads. Optional follow-up: `act`-driven release to mimic GH Actions
+    locally (deferred — `make` is the clearer local stand-in).
   - **5d — a real cloud target** (AKS or Fabric/Databricks + ADLS) reusing the same OpenTofu
     workflow. docker-compose remains dev-only.
 - **Scale testing** — validate on real distributed hardware (single-machine Spark hides shuffle cost).

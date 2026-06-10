@@ -16,18 +16,23 @@ mark milestones rather than released versions.
   volumes: `docker volume ls | grep airflow` then `docker volume rm <names>`.
 
 ### Added
-- **Phase 5c — registry-based CD (API)**: replaced `k3d image import` with a **k3d-managed
-  registry** declared in `platform/k3d-config.yaml` (created + wired by `make platform-up`; host
-  port 5111, not 5000 which macOS Control Center holds). The API chart now pulls
-  `registry.localhost:5111/de-playground-api:<git-sha>` (push via `localhost:5111`, pull via
-  the `k3d-` name — same store, no `/etc/hosts` edit). New targets: `api-push` (build+push, SHA +
-  moving `latest`; refuses a dirty tree so the artifact matches its commit), `api-release` (push →
-  bump `values.yaml` tag → commit `[skip ci]` → push, the local CI stand-in for the full
-  **pull-based** GitOps loop — Argo CD reconciles to the committed tag), and `registry-ls`. The
-  chart's `image.tag` is the GitOps record of what's deployed. Verified: chart renders the kubelet
-  pull ref, Makefile parses, configs valid. Airflow image still uses `k3d image import` (its bump
-  is a `tofu apply`, not Argo) — moving it onto the registry is the next 5c step; cloud registry +
-  GH-hosted CI is 5d.
+- **Phase 5c — registry-based CD**: replaced `k3d image import` with a **k3d-managed registry**
+  declared in `platform/k3d-config.yaml` (created + wired by `make platform-up`; host port 5111,
+  not 5000 which macOS Control Center holds). **Both** images now pull from it, so nothing
+  side-loads.
+  - **API** → `registry.localhost:5111/de-playground-api:<git-sha>`; `api-push` (build+push, SHA +
+    moving `latest`; refuses a dirty tree so the artifact matches its commit) + `api-release` (push
+    → bump `values.yaml` tag → commit `[skip ci]` → push = the local CI stand-in for the
+    **pull-based GitOps** loop; Argo CD reconciles to the committed tag).
+  - **Airflow** → `registry.localhost:5111/de-playground-airflow3:<git-sha>`; `airflow3-push` +
+    `airflow3-release` (push → bump both image tags in `airflow-values.yaml` → `tofu apply`). Same
+    registry; the deploy is OpenTofu/Helm, **not** Argo — a deliberate two-pattern contrast.
+  - Pull name is the bare `registry.localhost` (**no `k3d-` prefix** — SimpleConfig
+    `registries.create` uses the `name:` verbatim, unlike the `k3d registry create` CLI; the
+    truth is `cat /etc/rancher/k3s/registries.yaml` on a node). Push via `localhost:5111`, pull via
+    `registry.localhost:5111` (same store, no `/etc/hosts` edit). `registry-ls` lists the catalog.
+    Verified: both chart renders emit the wired pull ref, Makefile parses, configs valid. Cloud
+    registry + GH-hosted CI doing the build/push is 5d.
 - **Phase 5b — Airflow 3 on the cluster** (closes BACKLOG P1 Airflow EOL): official
   apache-airflow chart 1.19.0 (Airflow 3.1.7) with **KubernetesExecutor** on k3d, deployed by
   OpenTofu (`platform/tofu/airflow.tf`); custom image `platform/airflow/Dockerfile` (JDK17 +

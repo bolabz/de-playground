@@ -16,7 +16,7 @@ require-java17:
 
 .PHONY: help
 help:  ## List available targets
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 # ---- Python env (uv) ----
@@ -161,6 +161,7 @@ K3D_CLUSTER := de-playground
 # Same store, two names (see platform/k3d-config.yaml).
 REGISTRY_PUSH := localhost:5111
 API_IMAGE     := de-playground-api
+AIRFLOW_IMAGE := de-playground-airflow3
 
 .PHONY: platform-up
 platform-up:  ## Phase 5: create the local k3d cluster (1 server + 2 agents; compose unaffected)
@@ -236,10 +237,28 @@ ci-local:  ## Run the GitHub Actions CI workflow locally with act (Apple Silicon
 	act push --container-architecture linux/amd64
 
 # ---- Phase 5b: Airflow 3 on the cluster (official chart, KubernetesExecutor) ----
-.PHONY: airflow3-image
-airflow3-image: wheel  ## Build the Airflow 3 image (pipeline baked in) + import into k3d
-	docker build -f platform/airflow/Dockerfile -t de-playground-airflow3:k8s .
-	k3d image import de-playground-airflow3:k8s -c $(K3D_CLUSTER)
+# Image flow is Phase 5c (registry), same as the API. Difference: Airflow is deployed by
+# OpenTofu/Helm, not Argo — so its "deploy" is a `tofu apply`, not a git-sync.
+.PHONY: airflow3-push
+airflow3-push: wheel  ## Phase 5c: build the Airflow 3 image (pipeline baked in) + push to the k3d registry (SHA + latest)
+	@git diff --quiet && git diff --cached --quiet || { \
+		echo "working tree dirty — commit code first (the image is tagged with HEAD's SHA)."; exit 1; }
+	@SHA=$$(git rev-parse --short HEAD); \
+	echo "building + pushing $(REGISTRY_PUSH)/$(AIRFLOW_IMAGE):$$SHA (+ :latest)"; \
+	docker build -f platform/airflow/Dockerfile -t $(REGISTRY_PUSH)/$(AIRFLOW_IMAGE):$$SHA -t $(REGISTRY_PUSH)/$(AIRFLOW_IMAGE):latest .; \
+	docker push $(REGISTRY_PUSH)/$(AIRFLOW_IMAGE):$$SHA; \
+	docker push $(REGISTRY_PUSH)/$(AIRFLOW_IMAGE):latest
+
+.PHONY: airflow3-release
+airflow3-release: airflow3-push  ## Phase 5c: push image, bump both image tags in airflow-values.yaml, then tofu apply (+ commit)
+	@SHA=$$(git rev-parse --short HEAD); \
+	sed -i.bak -E "s|^( *tag: ).*|\1$$SHA # set by 'make airflow3-release' (do not hand-edit)|" platform/airflow-values.yaml; \
+	rm -f platform/airflow-values.yaml.bak; \
+	( cd platform/tofu && tofu apply ) && \
+	git add platform/airflow-values.yaml && \
+	git commit -m "deploy(airflow): $$SHA [skip ci]" && \
+	git push && \
+	echo "airflow image $$SHA applied (tofu/helm) + recorded in git"
 
 .PHONY: airflow3-ui
 airflow3-ui:  ## Port-forward the Airflow 3 UI to http://localhost:8082 (login admin/admin)

@@ -2,8 +2,9 @@
 # Deployed by OpenTofu (platform/tofu/airflow.tf). This retires the EOL Airflow 2.x compose.
 #
 # Topology: KubernetesExecutor — no resident workers; every task runs as its own pod using
-# the custom image below (built by `make airflow3-image`, which also imports it into k3d).
-# DAGs arrive via git-sync from the repo's `dags/` folder: push to main = DAG update.
+# the custom image below (built + pushed to the k3d registry by `make airflow3-release`, which
+# also bumps the tags here and runs `tofu apply`). DAGs arrive via git-sync from the repo's
+# `dags/` folder: push to main = DAG update.
 
 executor: KubernetesExecutor
 
@@ -13,12 +14,12 @@ executor: KubernetesExecutor
 # which lacks the pipeline venv and would fail every task).
 images:
   airflow:
-    repository: de-playground-airflow3
-    tag: k8s
-    pullPolicy: IfNotPresent # loaded via `k3d image import`, never pulled
+    repository: registry.localhost:5111/de-playground-airflow3
+    tag: latest # rewritten to the git SHA by `make airflow3-release` (do not hand-edit)
+    pullPolicy: IfNotPresent # pulled from the k3d registry; immutable SHA tags -> never re-pulled
   pod_template:
-    repository: de-playground-airflow3
-    tag: k8s
+    repository: registry.localhost:5111/de-playground-airflow3
+    tag: latest
     pullPolicy: IfNotPresent
 
 # DAGs from git — the GitOps story for the control plane itself.
