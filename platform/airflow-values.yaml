@@ -15,11 +15,11 @@ executor: KubernetesExecutor
 images:
   airflow:
     repository: registry.localhost:5111/de-playground-airflow3
-    tag: latest # rewritten to the git SHA by `make airflow3-release` (do not hand-edit)
+    tag: f4ec837 # set by 'make airflow3-release' (do not hand-edit)
     pullPolicy: IfNotPresent # pulled from the k3d registry; immutable SHA tags -> never re-pulled
   pod_template:
     repository: registry.localhost:5111/de-playground-airflow3
-    tag: latest
+    tag: f4ec837 # set by 'make airflow3-release' (do not hand-edit)
     pullPolicy: IfNotPresent
 
 # DAGs from git — the GitOps story for the control plane itself.
