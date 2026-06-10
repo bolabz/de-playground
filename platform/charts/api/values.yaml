@@ -7,7 +7,7 @@ image:
   # that change and rolls out the new image (pull-based CD). `tag` is the GitOps record of what's
   # deployed; it starts at `latest` until the first release sets a SHA.
   repository: k3d-registry.localhost:5111/de-playground-api
-  tag: latest # rewritten to sha-<short> by `make api-release` (do not hand-edit)
+  tag: 0ccb558 # set by 'make api-release' (do not hand-edit)
   # SHA tags are immutable, so IfNotPresent is correct + efficient: a new tag is a new pull, an
   # unchanged tag is never re-fetched. (The moving `:latest` is a human convenience, not deployed.)
   pullPolicy: IfNotPresent
