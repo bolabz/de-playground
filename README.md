@@ -423,8 +423,10 @@ out**. That's the production shape (ACR/GHCR + GitOps), local.
 
 The registry is **k3d-managed** and declared in `platform/k3d-config.yaml`, so `make platform-up`
 creates it and wires the cluster to pull from it. It has two names for the same store: you push
-from the host to `localhost:5111`, the kubelet pulls via `k3d-registry.localhost:5111` (only the
-repo path matters, so no `/etc/hosts` edit on macOS). Images are tagged with the **git short SHA**
+from the host to `localhost:5111`, the kubelet pulls via `registry.localhost:5111` (only the repo
+path matters, so no `/etc/hosts` edit on macOS). Note the name has **no `k3d-` prefix** —
+SimpleConfig `registries.create` uses the `name:` verbatim (unlike the `k3d registry create` CLI);
+the wired name is whatever `cat /etc/rancher/k3s/registries.yaml` shows on a node. Images are tagged with the **git short SHA**
 (immutable, traceable) plus a moving `:latest`.
 
 ```sh

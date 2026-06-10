@@ -19,7 +19,7 @@ mark milestones rather than released versions.
 - **Phase 5c — registry-based CD (API)**: replaced `k3d image import` with a **k3d-managed
   registry** declared in `platform/k3d-config.yaml` (created + wired by `make platform-up`; host
   port 5111, not 5000 which macOS Control Center holds). The API chart now pulls
-  `k3d-registry.localhost:5111/de-playground-api:<git-sha>` (push via `localhost:5111`, pull via
+  `registry.localhost:5111/de-playground-api:<git-sha>` (push via `localhost:5111`, pull via
   the `k3d-` name — same store, no `/etc/hosts` edit). New targets: `api-push` (build+push, SHA +
   moving `latest`; refuses a dirty tree so the artifact matches its commit), `api-release` (push →
   bump `values.yaml` tag → commit `[skip ci]` → push, the local CI stand-in for the full

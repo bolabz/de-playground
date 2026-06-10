@@ -3,6 +3,12 @@
   <component name="ChangeListManager">
     <list default="true" id="4f92178d-09ba-4dde-a008-879f07bc9468" name="Changes" comment="init commit">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/TROUBLESHOOTING.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/TROUBLESHOOTING.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/platform/charts/api/values.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/platform/charts/api/values.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/platform/k3d-config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/platform/k3d-config.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -133,7 +139,7 @@
       <workItem from="1780353924509" duration="25568000" />
       <workItem from="1780675888535" duration="8390000" />
       <workItem from="1781058984206" duration="33000" />
-      <workItem from="1781059034426" duration="3942000" />
+      <workItem from="1781059034426" duration="5014000" />
     </task>
     <task id="LOCAL-00001" summary="init commit">
       <option name="closed" value="true" />
@@ -143,7 +149,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781062981863</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="init commit">
+      <option name="closed" value="true" />
+      <created>1781062999017</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1781062999017</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -161,6 +175,7 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
+    <MESSAGE value="deploy(api): 42cbf37 [skip ci]" />
     <MESSAGE value="init commit" />
     <option name="LAST_COMMIT_MESSAGE" value="init commit" />
   </component>

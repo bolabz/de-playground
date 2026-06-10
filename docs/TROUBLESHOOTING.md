@@ -148,21 +148,24 @@ git push`, then hit **Refresh** on the app in the Argo UI: the `(cached)` means 
 the failure and only re-generates on refresh or its ~3-minute poll.
 
 **Pods `ImagePullBackOff` / `ErrImagePull`**
-- **API** (`k3d-registry.localhost:5111/de-playground-api:<sha>`, Phase 5c) — the image isn't in
-  the registry, or the registry is empty after a cluster *recreate*. Re-run `make api-release` (or
-  `make api-push`), then `make registry-ls` to confirm the tag is there. The chart's image `tag`
-  in `platform/charts/api/values.yaml` must be a tag that exists in the registry. NB: the chart
-  ref uses `k3d-registry.localhost:5111` (the kubelet's name); you *push* to `localhost:5111` —
-  same store, don't "fix" the chart to `localhost` (the node can't reach its own localhost).
+- **API** (`registry.localhost:5111/de-playground-api:<sha>`, Phase 5c) — first, is the tag in the
+  registry? `make registry-ls`. If empty (e.g. after a cluster *recreate*), `make api-release`. If
+  the tag IS there but the pull still fails, it's a **name mismatch** between the chart's image
+  host and what containerd was wired for: dump the truth with
+  `docker exec k3d-de-playground-server-0 cat /etc/rancher/k3s/registries.yaml` and make the chart
+  `image.repository` host match a `mirrors:` entry exactly (this rig: `registry.localhost:5111`,
+  **no** `k3d-` prefix — SimpleConfig `registries.create` uses the `name:` verbatim, unlike the
+  `k3d registry create` CLI). You *push* to `localhost:5111`; don't "fix" the chart to `localhost`
+  (the node can't reach its own localhost).
 - **Airflow** (`de-playground-airflow3:k8s`) — still side-loaded via `make airflow3-image`
   (`k3d image import`); re-run it after a rebuild or a cluster recreate (imports don't survive
   `platform-down`).
 
 **`docker push` to the registry fails (`connection refused` / `port 5000 already in use`)**
 The registry binds host port **5111**, not 5000 (macOS Control Center/AirPlay holds 5000 — that's
-why we avoided it). Confirm the registry container is up: `docker ps -f name=k3d-registry.localhost`.
+why we avoided it). Confirm the registry container is up: `docker ps -f name=registry.localhost`.
 After a Docker restart the registry comes back with `make platform-start`; if not, `docker start
-k3d-registry.localhost`. Sanity-check the API works: `curl http://localhost:5111/v2/_catalog`.
+registry.localhost`. Sanity-check the API works: `curl http://localhost:5111/v2/_catalog`.
 
 **Airflow 3 task pods crash with `No such file or directory: /opt/pipeline-venv/...`**
 Task pods are running the stock Airflow image instead of ours — `images.pod_template` in

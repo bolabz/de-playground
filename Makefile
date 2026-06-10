@@ -157,7 +157,7 @@ kibana-import:  ## Re-import kibana/saved_objects.ndjson into Kibana (overwrite)
 # ---- Phase 5: platform track (k3d + OpenTofu + Helm + Argo CD + act) ----
 # Prereqs (all free/OSS):  brew install k3d kubectl helm opentofu act
 K3D_CLUSTER := de-playground
-# Phase 5c registry: push from the host via localhost; the chart/kubelet pull via the k3d- name.
+# Phase 5c registry: push from the host via localhost; the chart/kubelet pull via registry.localhost.
 # Same store, two names (see platform/k3d-config.yaml).
 REGISTRY_PUSH := localhost:5111
 API_IMAGE     := de-playground-api

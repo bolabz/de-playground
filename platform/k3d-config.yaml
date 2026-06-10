@@ -19,14 +19,16 @@ options:
 
 # Phase 5c: a k3d-managed image registry — real push/pull instead of `k3d image import`.
 # k3d creates the registry container AND wires the cluster's containerd to pull from it, all from
-# `make platform-up`. The registry has TWO names for the SAME store (k3d prefixes managed
-# resources with `k3d-`):
+# `make platform-up`. The registry has TWO names for the SAME store:
 #   * push from your host                  ->  localhost:5111
-#   * the kubelet pulls / chart image ref  ->  k3d-registry.localhost:5111
-# Only the repository path matters, so pushing via localhost and pulling via the k3d- name hit the
-# same image (no /etc/hosts edit needed on macOS). Port 5111, not 5000 (macOS Control Center
-# squats on 5000). A cluster *recreate* (platform-down/up) gives a fresh EMPTY registry — re-run
-# `make api-release`. See README "Phase 5c" + TROUBLESHOOTING.
+#   * the kubelet pulls / chart image ref  ->  registry.localhost:5111
+# NB: SimpleConfig `registries.create` uses the `name:` VERBATIM (no `k3d-` prefix — that prefix
+# is only for the `k3d registry create` CLI). Confirm the wired name with:
+#   docker exec k3d-de-playground-server-0 cat /etc/rancher/k3s/registries.yaml
+# Only the repository path matters, so pushing via localhost and pulling via registry.localhost hit
+# the same image (no /etc/hosts edit needed on macOS). Port 5111, not 5000 (macOS Control Center
+# squats on 5000); containerd maps :5111 -> the registry's internal :5000. A cluster *recreate*
+# (platform-down/up) gives a fresh EMPTY registry — re-run `make api-release`. See README "Phase 5c".
 registries:
   create:
     name: registry.localhost
