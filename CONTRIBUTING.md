@@ -86,6 +86,7 @@ placeholders. On Azure these become Entra ID + Key Vault + RBAC — see `docs/AR
 ## When something breaks
 
 Operational gotchas (service-not-running, JDK version, Apple-Silicon emulation, SeaweedFS/ES
-readiness races, compose relative paths, `--build` staleness, bucket pre-creation, Airflow
-external network name) all live in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) as a
+readiness races, compose relative paths, `--build` staleness, bucket pre-creation, and the
+Phase 5 platform ones — host-bridge DNS, registry name mismatch, stale `port-forward`s after a
+deploy, task-pod OOM) all live in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) as a
 symptom → cause → fix runbook. Check there first.

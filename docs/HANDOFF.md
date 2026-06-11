@@ -7,19 +7,21 @@ history lives in [`../CHANGELOG.md`](../CHANGELOG.md); design constraints by int
 **snapshot table** (where we stand vs. the modern stack) and the **industry context** at the
 bottom.
 
-> **Refreshed 2026-06-03.** Snapshot reflects current state. Two pinned components are
-> **past EOL** (Spark 3.5, Airflow 2.11) — see [BACKLOG P1](BACKLOG.md#p1--version-upgrades-past-eol-as-of-2026-06-03)
-> for the upgrade plan.
+> **Refreshed 2026-06-09.** Snapshot reflects current state. The Phase 5 platform track
+> (k3d + OpenTofu + Helm + Argo CD + registry CD) and the Airflow 2→3 upgrade landed since the
+> last refresh. Remaining past-EOL pins: **Spark 3.5** and **ES 8.14** — see
+> [BACKLOG P1](BACKLOG.md#p1--version-upgrades-past-eol-as-of-2026-06-03) for the upgrade plan.
 
 ## TL;DR
 
 This rig is **exemplary as a learning/reference PoC** and follows modern Python + data-eng
-hygiene well. The remaining productionization gaps are tracked in
-[BACKLOG P2](BACKLOG.md#p2--productionization-from-docshandoffmd): managed cloud target +
-IaC, data quality / contracts, lineage, secrets vault. The urgent firefighting is the EOL
-version upgrades ([BACKLOG P1](BACKLOG.md#p1--version-upgrades-past-eol-as-of-2026-06-03)).
-These are exactly the "~20% that doesn't transfer" the architecture doc called out — none
-are surprises.
+hygiene well. *Local* IaC + Kubernetes + GitOps + registry-based CD now exist (Phase 5). The
+remaining productionization gaps are tracked in
+[BACKLOG P2](BACKLOG.md#p2--productionization-from-docshandoffmd): a **managed cloud** target
+(5d), data quality / contracts, lineage, secrets vault. The remaining firefighting is the EOL
+version upgrades ([BACKLOG P1](BACKLOG.md#p1--version-upgrades-past-eol-as-of-2026-06-03)) —
+now just **Spark 4** and **ES 8.19+** (Airflow 3 done). These are exactly the "~20% that doesn't
+transfer" the architecture doc called out — none are surprises.
 
 ## Where we're exemplary vs. where we deviate
 
@@ -38,18 +40,19 @@ are surprises.
 | Dev Container | ✅ done | `.devcontainer/devcontainer.json` (MCR Python 3.11 + Java 17 + docker-outside-of-docker) |
 | Troubleshooting runbook | ✅ done | `docs/TROUBLESHOOTING.md` (symptom → cause → fix) |
 | Compose modularity | ✅ done | root `docker-compose.yml` uses `include:` for `compose/{core,spark,serving,observability}.yml` |
+| Local IaC + K8s + GitOps + CD | ✅ done (local) | Phase 5: k3d cluster, OpenTofu, Helm (API chart), Argo CD pull-based deploys, k3d registry + `make api-release`/`airflow3-release`; Airflow 3 on KubernetesExecutor |
 | **Automated tests in CI** | ⚠️ gap | transform logic verified ad hoc in Spark, not in the suite (4/15 modules covered) |
 | **Data quality / contracts** | ❌ missing | no Great Expectations/Soda gate, no freshness SLA |
-| **IaC / deploy target** | ❌ missing | docker-compose ≠ production; no Terraform/Bicep, no K8s/cloud target |
+| **Managed cloud target** | ❌ missing | local IaC/K8s done; no AKS/Fabric/Databricks + ADLS yet (5d). docker-compose ≠ production |
 | **Secrets** | ⚠️ by design | static `.env`, not a vault (the Azure-only lesson) |
 | **Lineage** | ❌ missing | no OpenLineage/Marquez |
 | **ADRs** | ⚠️ proto | decision rationale lives in `CHANGELOG.md` + `ARCHITECTURE.md` non-goals; no `docs/adr/` yet |
-| **Versions** | 🔥 PAST EOL | Spark 3.5 (52d past), Airflow 2.11 (42d past), ES 8.14 — upgrade is urgent |
+| **Versions** | 🔥 PAST EOL | Spark 3.5 + ES 8.14 still past EOL (Airflow 3.1.7 done via Phase 5b) — upgrade is urgent |
 
 ## Remaining work
 
-- **Urgent firefighting:** [BACKLOG P1](BACKLOG.md#p1--version-upgrades-past-eol-as-of-2026-06-03) — Spark 4, Airflow 3, ES 8.19+ upgrades (both Spark and Airflow EOL'd more than a month ago).
-- **Productionization queue:** [BACKLOG P2](BACKLOG.md#p2--productionization-from-docshandoffmd) — data contracts, lineage, secrets vault, IaC, ADRs, Spark unit tests, compose healthchecks, `make check-env`.
+- **Urgent firefighting:** [BACKLOG P1](BACKLOG.md#p1--version-upgrades-past-eol-as-of-2026-06-03) — Spark 4 and ES 8.19+ upgrades (both past EOL). Airflow 3 is done (Phase 5b).
+- **Productionization queue:** [BACKLOG P2](BACKLOG.md#p2--productionization-from-docshandoffmd) — managed cloud target (5d), data contracts, lineage, secrets vault, ADRs, Spark unit tests, compose healthchecks, `make check-env`. (Local IaC/K8s/GitOps/CD landed in Phase 5.)
 - **Observability tier-3:** [BACKLOG P3](BACKLOG.md#p3--observability-follow-ups-from-docsobservabilitymd) — traces backend, dlt run-trace persistence, Airflow OTel.
 
 ## How other teams handle this (real-world)
@@ -58,11 +61,12 @@ The mainstream OSS-friendly shape in 2026: **uv + ruff + mypy/ty** for Python; *
 GitHub Actions** gating lint/type/test; **Dev Containers / Codespaces** for environment parity;
 **ADRs + Keep-a-Changelog** for decisions/history; **OpenTelemetry → Prometheus/Grafana/Loki**
 for ops observability and **Great Expectations/Soda + OpenLineage** for *data* observability;
-**Terraform** for IaC; and a managed orchestrator + lakehouse (Airflow 3 / Astronomer, or ADF +
-Fabric/Databricks) rather than self-hosted compose. We now match most of that list (uv/ruff/mypy,
-pre-commit, GH Actions, Dev Container, Keep-a-Changelog, OTel→Prom/Grafana/ELK, structured
-logging); the remaining gaps are **ADRs, data contracts, lineage (OpenLineage), IaC, and a
-managed cloud target.**
+**Terraform/OpenTofu** for IaC + **Argo/Flux** for GitOps; and a managed orchestrator + lakehouse
+(Airflow 3 / Astronomer, or ADF + Fabric/Databricks) rather than self-hosted compose. We now match
+most of that list (uv/ruff/mypy, pre-commit, GH Actions, Dev Container, Keep-a-Changelog,
+OTel→Prom/Grafana/ELK, structured logging, **Airflow 3**, and **OpenTofu + Helm + Argo CD + a
+registry** locally); the remaining gaps are **ADRs, data contracts, lineage (OpenLineage), and a
+managed *cloud* target** (the local platform track stands in for it today).
 
 ## Sources
 

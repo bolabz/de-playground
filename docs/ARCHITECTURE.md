@@ -46,6 +46,7 @@ below so reviewers see them rendered alongside the prose without leaving the doc
 | Elasticsearch | Azure AI Search / Elastic Cloud on Azure | serving |
 | Kibana | Power BI | serving |
 | FastAPI | same app on Azure Container Apps / App Service | serving |
+| k3d + OpenTofu + Helm + Argo CD + local registry | AKS + Bicep/Terraform + Helm + Flux/Argo + ACR | platform (deploy) |
 | PyTorch *(later)* | Azure Machine Learning | aspirational |
 
 ---
@@ -166,7 +167,9 @@ de-playground/
 ├── jobs/transform_cluster.py   # spark-submit entry for the standalone cluster
 ├── api/                    # FastAPI service — own Dockerfile (separate deployable)
 ├── spark/Dockerfile        # Apache Spark + Delta/S3A jars baked in (cluster + submit image)
-├── airflow/                # Dockerfile + docker-compose.yml (LocalExecutor; joins `de` net)
+├── compose/                # modular compose: core / spark / serving / observability (via include:)
+├── platform/               # Phase 5 deploy track: k3d-config, Helm chart (charts/api), OpenTofu
+│                           #   (tofu/), Argo CD app (argocd/), Airflow 3 image + chart values
 ├── kibana/saved_objects.sh # export/import dashboards as version-controlled NDJSON
 ├── sql/                    # restore, enable_cdc, create_app_login (+ .sh wrappers)
 ├── tests/                  # DB-free unit tests (config, lake/retry, table specs)
@@ -215,6 +218,10 @@ Decisions kept simple on purpose; the *concepts* still transfer to a production 
   real distributed hardware.
 - **CDC vs Change Tracking:** chose full CDC for fidelity (before/after images, deletes via
   the transaction log); CT would be lighter (no SQL Agent) but loses the row-level deltas.
-- **Compute topology:** Airflow runs pipeline steps in-worker for simplicity; enterprise
-  Airflow / ADF triggers external compute (Databricks, Synapse, etc.) — the orchestration
-  *concepts* (DAGs, retries, backfills) transfer; the execution topology is what you'd swap.
+- **Compute topology:** Airflow (3, KubernetesExecutor on k3d) runs each pipeline step in its own
+  ephemeral task **pod** for simplicity; enterprise Airflow / ADF triggers *external* compute
+  (Databricks, Synapse, etc.) — the orchestration *concepts* (DAGs, retries, backfills, pod-per-task)
+  transfer; the in-pod execution topology is what you'd swap.
+- **Deploy target:** the Phase 5 platform track (k3d + OpenTofu + Helm + Argo CD + a local
+  registry) is a *local* stand-in for a managed cloud target (AKS / Fabric / Databricks + ACR);
+  it teaches the IaC + GitOps + pull-based-CD mechanics, not real multi-node scale or cloud IAM.

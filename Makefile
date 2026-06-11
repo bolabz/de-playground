@@ -176,7 +176,7 @@ platform-start:  ## Restart the EXISTING k3d cluster after a host/Docker reboot 
 	k3d cluster start $(K3D_CLUSTER)
 
 .PHONY: platform-stop
-platform-stop:  ## Stop the k3d cluster without deleting it (frees RAM; keeps state + imported images)
+platform-stop:  ## Stop the k3d cluster without deleting it (frees RAM; keeps cluster state + the registry)
 	k3d cluster stop $(K3D_CLUSTER)
 
 .PHONY: api-push

@@ -3,11 +3,11 @@
 # Same isolation pattern as before: Airflow's own environment stays pristine; the pipeline
 # lives in /opt/pipeline-venv. ONE difference from the compose image: the de_playground code
 # is BAKED IN (installed from the wheel) instead of volume-mounted — on Kubernetes, task pods
-# can't see your working tree, so code ships as an artifact. Rebuild + reimport on code change:
-#   make airflow3-image
+# can't see your working tree, so code ships as an artifact. Rebuild + repush on code change:
+#   make airflow3-release   (build -> push to the k3d registry -> bump tags -> tofu apply; Phase 5c)
 #
 # Build from the REPO ROOT (needs dist/):  docker build -f platform/airflow/Dockerfile .
-# Tag pinned to the chart 1.19.0 default; keep image and chart in step when bumping.
+# Image is pushed to the k3d registry (Phase 5c), not imported; the chart pulls it by git-SHA tag.
 FROM apache/airflow:3.1.7
 
 USER airflow

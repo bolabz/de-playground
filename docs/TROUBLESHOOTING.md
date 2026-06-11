@@ -170,8 +170,9 @@ registry.localhost`. Sanity-check the API works: `curl http://localhost:5111/v2/
 
 **Airflow 3 task pods crash with `No such file or directory: /opt/pipeline-venv/...`**
 Task pods are running the stock Airflow image instead of ours — `images.pod_template` in
-`platform/airflow-values.yaml` must point at `de-playground-airflow3:k8s` (it does NOT inherit
-`images.airflow`; KubernetesExecutor task pods have their own image knob).
+`platform/airflow-values.yaml` must match `images.airflow` (`registry.localhost:5111/de-playground-airflow3`,
+Phase 5c); it does NOT inherit `images.airflow`, so KubernetesExecutor task pods have their own
+image knob and silently fall back to stock if it's unset.
 
 **Airflow 3 on k3d: DAG missing / stale in the UI**
 DAGs git-sync from the *remote*'s `dags/` folder every 60s — commit + push DAG changes (the

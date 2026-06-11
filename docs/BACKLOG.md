@@ -3,6 +3,11 @@
 Single home for future work. Topical docs (`OBSERVABILITY.md`, `HANDOFF.md`) point here
 instead of carrying their own scattered lists. Ordered roughly by priority.
 
+> **Python code-hardening** has a dedicated sequenced plan in
+> [`PYTHON_HARDENING_PLAN.md`](PYTHON_HARDENING_PLAN.md) (contracts/boundaries, typing,
+> testing + coverage, uv-workspaces, supply-chain hardening). It expands this backlog's P2
+> testing/ADR/modularity themes into an executable order; deferred items from it land here.
+
 ## P1 — version upgrades (PAST EOL as of 2026-06-03)
 
 Conservative versions chosen during the build have aged out — two are now **past EOL**, not
@@ -76,8 +81,21 @@ Recommended order: ES first (smallest blast radius), Spark second, Airflow third
 
 ## P5 — tooling / nice-to-have
 
-- **Task runner** — optionally move `make` targets to a Python-native runner (`poethepoet` in
-  `pyproject.toml`, or `nox` for test sessions) run via `uv`. Make is fine as-is; this is polish.
+- **Task runner** — keep `make` as the primary runner (it works, it's embedded, README-referenced;
+  `uv` already covers env/deps). 2026 consensus is *not* a wholesale move to `poethepoet`: the
+  high-value, non-overlapping addition is **`nox`** for the **Java-vs-no-Java pytest session
+  matrix** introduced by the Spark-test marker (Hardening Plan WS5). So: adopt `nox` *only* for
+  that test orchestration if/when the matrix gets unwieldy; skip `poe` (sugar, not worth a
+  migration). [Task runners — Scientific-Python guide](https://learn.scientific-python.org/development/guides/tasks/)
+- **Full per-layer package split** (deferred from Hardening Plan, was "P3") — split
+  `common/extract/transform/load` into separate uv-workspace packages, each with its own
+  `pyproject.toml`, so a layer can be versioned/released/lifted to its own repo with zero refactor.
+  **Recommended against until triggered:** `import-linter` already enforces the same layer
+  boundaries within one package, and a shared workspace lockfile means the split wouldn't even
+  isolate dependency conflicts — so it's packaging ceremony without a second consumer.
+  **Trigger to revisit:** a layer needs independent versioning, release cadence, or scaling. The
+  workspace promotion (Hardening Plan WS7) already makes that future split a `git mv`, not a
+  rewrite. See [`PYTHON_HARDENING_PLAN.md`](PYTHON_HARDENING_PLAN.md).
 - **GitHub Actions caching** — add uv cache + ruff cache to `.github/workflows/ci.yml` to cut
   cold-install time. Currently no caching is configured.
 - **GitHub issue / PR templates** — `.github/ISSUE_TEMPLATE/` + `PULL_REQUEST_TEMPLATE.md` for

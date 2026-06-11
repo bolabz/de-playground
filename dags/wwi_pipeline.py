@@ -3,13 +3,15 @@
 THIN by design: this file only wires task ordering, schedule, and retries. All business
 logic lives in the de_playground package and is *invoked* here, never defined here.
 
-Each task shells out to the pipeline's isolated venv (kept separate from Airflow's own deps,
-since Airflow 2.x pins SQLAlchemy <2.0 while the pipeline wants 2.0). The same entrypoints
-you run by hand (`python -m de_playground.*`) run here on a schedule with retries.
+Each task shells out to the pipeline's isolated venv (baked into the image, kept separate from
+Airflow's own deps — the pipeline needs SQLAlchemy 2.x plus a heavy Spark/ODBC stack, so
+isolating it avoids dependency clashes). The same entrypoints you run by hand
+(`python -m de_playground.*`) run here on a schedule with retries.
 
-Endpoints come from the container env (service names on the `de` network): the tasks reach
-SQL Server, SeaweedFS, and Elasticsearch by name. Transform runs Spark in local mode inside
-the worker.
+Runs on Airflow 3 (KubernetesExecutor on k3d): each task is its own ephemeral pod. Endpoints
+come from the pod env — tasks reach SQL Server, SeaweedFS, and Elasticsearch on the host via
+`host.docker.internal` (the data services stay in docker compose; Airflow runs on the cluster).
+Transform runs Spark in local mode inside the task pod.
 """
 
 from __future__ import annotations
@@ -18,7 +20,7 @@ from datetime import datetime, timedelta
 
 try:  # Airflow 3: authoring API moved to the Task SDK
     from airflow.sdk import DAG
-except ImportError:  # Airflow 2.x (compose setup, during the 5b transition)
+except ImportError:  # legacy Airflow 2.x fallback (the cluster runs 3.x; kept for portability)
     from airflow import DAG  # type: ignore[no-redef,attr-defined]
 
 try:  # Airflow 3: BashOperator lives in the standard provider (also installable on 2.x)
@@ -26,7 +28,9 @@ try:  # Airflow 3: BashOperator lives in the standard provider (also installable
 except ImportError:
     from airflow.operators.bash import BashOperator  # type: ignore[no-redef]
 
-# Pipeline runs in its own venv; PYTHONPATH points at the mounted source.
+# Pipeline runs in its own baked-in venv (de_playground installed from the wheel), so `python -m`
+# resolves it directly. The PYTHONPATH below is a vestigial leftover from the volume-mounted
+# compose era — /opt/de_playground/src doesn't exist in the k8s image, so it's a harmless no-op.
 _RUN = "PYTHONPATH=/opt/de_playground/src /opt/pipeline-venv/bin/python -m"
 
 default_args = {
@@ -40,7 +44,7 @@ with DAG(
     description="WideWorldImporters medallion ELT: extract -> transform -> index",
     schedule="@daily",
     start_date=datetime(2026, 1, 1),
-    catchup=False,  # backfill on demand: `airflow dags backfill ...`
+    catchup=False,  # backfill on demand (Airflow 3): `airflow backfill create --dag-id wwi_pipeline --from-date ... --to-date ...`
     max_active_runs=1,  # transforms overwrite, so never run two at once
     default_args=default_args,
     tags=["de-playground", "medallion"],

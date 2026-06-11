@@ -6,6 +6,22 @@ mark milestones rather than released versions.
 
 ## [Unreleased]
 
+### Changed
+- **Doc-accuracy sweep (2026-06-09):** audited all 11 tracked `.md` files programmatically
+  (every `make` command cross-checked against real targets, all path refs + internal links
+  verified, stale-token scan). Fixes: `docs/HANDOFF.md` refreshed to reflect Phase 5 (local
+  IaC/K8s/GitOps/CD now ✅; "managed *cloud* target" is the remaining gap; Airflow EOL resolved);
+  `docs/ARCHITECTURE.md` project tree (dropped deleted `airflow/`, added `platform/` + `compose/`)
+  + KubernetesExecutor compute-topology note + a platform row in the Azure mapping;
+  `docs/TROUBLESHOOTING.md` pod_template entry → registry image ref; `CONTRIBUTING.md` runbook
+  pointer → current platform gotchas. No dangling `make`/link/path references remain.
+  Then swept **non-md** surfaces the same way: `platform/airflow/Dockerfile` header + `Makefile`
+  `platform-stop` help (renamed-target / "imported images" phrasing), and `dags/wwi_pipeline.py`
+  docstring + comments (k8s task pods reach data services via `host.docker.internal`, not compose
+  service names on the `de` network; KubernetesExecutor task **pods**, not workers; Airflow 3
+  backfill CLI is `airflow backfill create`, not `airflow dags backfill`; flagged the vestigial
+  `PYTHONPATH=/opt/de_playground/src` as a no-op leftover from the volume-mounted compose era).
+
 ### Removed
 - **Deprecated compose Airflow** (Phase 4): deleted the `airflow/` dir (Dockerfile +
   docker-compose.yml), the `up-airflow`/`down-airflow`/`airflow-logs` Make targets and the
