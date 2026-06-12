@@ -44,7 +44,8 @@ with DAG(
     description="WideWorldImporters medallion ELT: extract -> transform -> index",
     schedule="@daily",
     start_date=datetime(2026, 1, 1),
-    catchup=False,  # backfill on demand (Airflow 3): `airflow backfill create --dag-id wwi_pipeline --from-date ... --to-date ...`
+    # backfill on demand (Airflow 3 CLI): `airflow backfill create --dag-id wwi_pipeline ...`
+    catchup=False,
     max_active_runs=1,  # transforms overwrite, so never run two at once
     default_args=default_args,
     tags=["de-playground", "medallion"],
