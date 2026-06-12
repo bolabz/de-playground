@@ -67,15 +67,19 @@ jobs:
       - name: pip-audit (known-CVE deps; full workspace incl. api/)
         # `--all-extras --all-packages` ensures the api/ workspace member's deps
         # (elasticsearch, fastapi, opentelemetry-*) are also audited, not just the root.
+        # `--skip-editable` excludes the two local workspace projects (de-playground,
+        # de-playground-api), which uv installs editable — pip-audit would otherwise try to
+        # look them up on PyPI, fail ("Dependency not found on PyPI"), and --strict turns that
+        # into a hard error. Third-party deps are non-editable, so they're all still audited.
         # Strict mode FAILS on any finding; when an unfixable CVE shows up against a
         # pinned EOL dep (Spark 3.5, ES 8.14 — see BACKLOG P1), add it to the inline
         # `--ignore-vuln <CVE-ID>` list below WITH a one-line rationale so the gate stays
         # trustworthy, not noisy. (Source plan WS8: "seed a baseline".)
         run: |
           uv sync --all-extras --all-packages
-          uv run --with pip-audit pip-audit --strict
+          uv run --with pip-audit pip-audit --strict --skip-editable
         # Example for the future:
-        # uv run --with pip-audit pip-audit --strict \
+        # uv run --with pip-audit pip-audit --strict --skip-editable \
         #   --ignore-vuln GHSA-xxxx-yyyy-zzzz  # py4j: unfixable; tracked in Spark 4 upgrade (BACKLOG P1)
 
       - name: gitleaks (secrets scan; .env.example placeholders allowlisted)

@@ -34,8 +34,12 @@ lint:  ## ruff lint + format check
 	uv run ruff format --check .
 
 .PHONY: test
-test:  ## Run pytest
+test:  ## Run pytest (DB-free + Java-free; spark tests deselected by addopts)
 	uv run pytest
+
+.PHONY: test-spark
+test-spark:  ## Run the opt-in Spark-marked transform tests (conftest auto-pins JDK 17)
+	uv run pytest -m pyspark
 
 # ---- Docker phases ----
 .PHONY: up-ingest
