@@ -158,12 +158,14 @@ omit = [
 show_missing = true
 skip_covered = false
 
-# ---- Architecture enforcement (import-linter, WS3) -------------------------------------
-# Three contracts that machine-check the layering in docs/PYTHON_HARDENING_PLAN.md
-# "Target shape". Exhaustive ON: every new sub-package of de_playground must be placed in
-# the layers list or the contract fails — catches architectural drift the moment it lands.
+# ---- Architecture enforcement (import-linter, WS3 + WS7 post-mortem) -------------------
+# Four contracts machine-check the layering in docs/PYTHON_HARDENING_PLAN.md "Target
+# shape". Exhaustive ON for the de_playground layered contract: every new sub-package
+# must be placed in the layers list or the contract fails — catches architectural drift
+# the moment it lands. `api` is included as a root package too so the serving-plane
+# isolation contract (added post-WS7) is enforced, not just documented.
 [tool.importlinter]
-root_packages = ["de_playground"]
+root_packages = ["de_playground", "api"]
 
 [[tool.importlinter.contracts]]
 name = "Layered architecture (config < common < {extract|transform|load})"
@@ -195,6 +197,22 @@ type = "forbidden"
 source_modules = ["de_playground.config", "de_playground.contracts"]
 forbidden_modules = [
     "de_playground.common",
+    "de_playground.extract",
+    "de_playground.transform",
+    "de_playground.load",
+]
+
+[[tool.importlinter.contracts]]
+# Serving-plane isolation, machine-checked (post-WS7 hardening). api may import
+# de_playground.contracts (the shared Pydantic schema) and nothing else from the
+# pipeline. A future `from de_playground.load import ...` straight into the API would be
+# rejected at PR time — discipline becomes a CI gate.
+name = "api may only import de_playground.contracts"
+type = "forbidden"
+source_modules = ["api"]
+forbidden_modules = [
+    "de_playground.common",
+    "de_playground.config",
     "de_playground.extract",
     "de_playground.transform",
     "de_playground.load",
