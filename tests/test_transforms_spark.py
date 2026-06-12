@@ -13,7 +13,12 @@ from __future__ import annotations
 
 import pytest
 
-from de_playground.transform.silver_cdc import collapse_changes
+# Skip the whole module at collection time when pyspark isn't installed (default `dev`-only
+# sync). Otherwise the top-level `from de_playground.transform...` would explode before
+# pytest gets a chance to consult the `pyspark` marker.
+pytest.importorskip("pyspark")
+
+from de_playground.transform.silver_cdc import collapse_changes  # noqa: E402
 
 pytestmark = pytest.mark.pyspark
 

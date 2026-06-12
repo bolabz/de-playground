@@ -16,6 +16,10 @@ dependencies = [
     "deltalake>=0.18",              # delta-rs: read/write Delta without Spark
     "pyarrow>=16.0",                # Parquet/Arrow backbone
     "boto3-stubs~=1.43.0",          # typed S3 client (wired into common/lake.py in WS4)
+    # ---- load phase (Gold -> Elasticsearch) ----
+    # to_elasticsearch.py imports `elasticsearch` directly; the api/ workspace member also
+    # declares it, but it's needed in the core lib for `make index` / WS5 test imports.
+    "elasticsearch>=8.14,<9",       # match the ES server major
 ]
 
 [project.optional-dependencies]
