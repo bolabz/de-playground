@@ -1,0 +1,23 @@
+# Dependabot — opens PRs for security advisories and version bumps. The 2026 recommendation
+# is `pip` for Python (covers uv-resolved deps via the pyproject.toml/uv.lock pair) and
+# `github-actions` so SHA-pinned actions in workflows can still be updated automatically.
+# See docs/PYTHON_HARDENING_PLAN.md WS8 for the rationale.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["deps", "automated"]
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["ci", "automated"]
+    commit-message:
+      prefix: "chore(ci)"

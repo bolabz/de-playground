@@ -71,8 +71,9 @@ def _cdc_resource(spec: TableSpec, engine) -> DltResource:
         change_lsn=dlt.sources.incremental("change_lsn", initial_value=_INITIAL_LSN),  # noqa: B008
     ) -> Iterator[dict]:
         last = change_lsn.last_value or _INITIAL_LSN
+        # `ct`/`select_business` derive from hardcoded WWI_TABLES, not user input.
         sql = text(
-            f"SELECT CONVERT(CHAR(20), ct.[__$start_lsn], 2) AS change_lsn, "
+            f"SELECT CONVERT(CHAR(20), ct.[__$start_lsn], 2) AS change_lsn, "  # noqa: S608
             f"CONVERT(CHAR(20), ct.[__$seqval], 2) AS change_seqval, "
             f"ct.[__$operation] AS change_operation, {select_business} "
             f"FROM cdc.[{ct}] AS ct "

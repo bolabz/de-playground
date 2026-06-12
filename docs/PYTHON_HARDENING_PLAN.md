@@ -375,7 +375,7 @@ structural seam that makes a future polyrepo split cheap — the explicit long-t
 **Exit:** `uv sync` resolves the workspace; `api` builds from its own `pyproject` (no duplicated
 deps); each member could be `git mv`'d to its own repo with only a path change.
 
-### WS8 — Supply-chain, secrets, and CI hardening
+### WS8 — Supply-chain, secrets, and CI hardening ✅ landed 2026-06-11
 
 The three hardening tracks selected. All additive CI/pre-commit gates; no runtime change.
 

@@ -24,15 +24,15 @@ class Settings(BaseSettings):
     mssql_db: str = "WideWorldImporters"
     # Least-privilege login the PIPELINE uses (created by sql/create_app_login.sql).
     mssql_app_user: str = "de_extract"
-    mssql_app_password: str = "Change_me_app_passw0rd"  # LOCAL-ONLY placeholder
+    mssql_app_password: str = "Change_me_app_passw0rd"  # noqa: S105 - LOCAL-ONLY placeholder
     # Admin password — used by the admin shell scripts only, never by Python.
-    mssql_sa_password: str = "Change_me_strong_passw0rd"  # LOCAL-ONLY placeholder
+    mssql_sa_password: str = "Change_me_strong_passw0rd"  # noqa: S105 - LOCAL-ONLY placeholder
 
     # ---- Lake: SeaweedFS (S3-compatible) ----
     # The pipeline uses the least-privilege "app" identity (Read/Write/List, no Admin).
     s3_endpoint_url: str = "http://localhost:8333"
     s3_access_key: str = "appaccesskey"  # LOCAL-ONLY placeholder
-    s3_secret_key: str = "appsecretkey"  # LOCAL-ONLY placeholder
+    s3_secret_key: str = "appsecretkey"  # noqa: S105 - LOCAL-ONLY placeholder
     bronze_bucket: str = "bronze"
     silver_bucket: str = "silver"
     gold_bucket: str = "gold"

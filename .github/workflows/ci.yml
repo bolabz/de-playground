@@ -5,14 +5,19 @@ on:
     branches: [main]
   pull_request:
 
+# Least-privilege at the workflow level; widen per-job only where needed. 2026 GitHub Actions
+# hardening recommendation (StepSecurity / Well-Architected). See PYTHON_HARDENING_PLAN.md WS8.
+permissions:
+  contents: read
+
 jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install uv (pinned Python 3.11)
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           python-version: "3.11"
 
@@ -30,3 +35,29 @@ jobs:
 
       - name: Tests (pytest, DB-free)
         run: uv run pytest
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          python-version: "3.11"
+
+      - name: pip-audit (known-CVE deps via uv-resolved environment)
+        run: |
+          uv sync --all-extras
+          uv run --with pip-audit pip-audit --strict
+
+      - name: gitleaks (secrets scan; .env.example placeholders allowlisted)
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Markdown link check (lychee)
+        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2
+        with:
+          args: --no-progress --verbose './**/*.md'
+          fail: true

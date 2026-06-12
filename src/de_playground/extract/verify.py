@@ -37,7 +37,8 @@ def source_counts() -> dict[str, int]:
     with engine.connect() as conn:
         for spec in WWI_TABLES:
             n = conn.execute(
-                text(f"SELECT COUNT(*) FROM [{spec.schema}].[{spec.table}]")
+                # noqa: S608 — spec.schema/spec.table come from hardcoded WWI_TABLES, not user input.
+                text(f"SELECT COUNT(*) FROM [{spec.schema}].[{spec.table}]")  # noqa: S608
             ).scalar_one()
             counts[spec.resource_name] = int(n)
     engine.dispose()

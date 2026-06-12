@@ -1,0 +1,27 @@
+# gitleaks config — secrets-scanning gate (pre-commit + CI). Allow .env.example LOCAL-ONLY
+# placeholders, but block any real secret form. The repo's discipline is that .env is
+# gitignored and only .env.example is committed, with obvious throwaway values.
+
+title = "de-playground gitleaks config"
+
+# Inherit the upstream default rules (entropy detectors + 100+ provider-specific patterns),
+# then layer allowlists for the known LOCAL-ONLY placeholders in this repo. See
+# docs/PYTHON_HARDENING_PLAN.md WS8 + CONTRIBUTING.md "Security" for context.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "LOCAL-ONLY placeholders in .env.example and config defaults"
+paths = [
+  '''\.env\.example$''',
+  '''src/de_playground/config\.py$''',
+]
+# Block real-looking secrets even in these files; just exempt the well-known placeholders.
+regexes = [
+  '''Change_me_strong_passw0rd''',
+  '''Change_me_app_passw0rd''',
+  '''appaccesskey''',
+  '''appsecretkey''',
+  '''adminaccesskey''',
+  '''adminsecretkey''',
+]

@@ -51,7 +51,12 @@ line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]   # pycodestyle, pyflakes, isort, pyupgrade, bugbear
+# pycodestyle, pyflakes, isort, pyupgrade, bugbear, flake8-bandit (security; WS8)
+select = ["E", "F", "I", "UP", "B", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+# `assert` is idiomatic in pytest; flake8-bandit's S101 would flag every test.
+"tests/**/*.py" = ["S101"]
 
 [tool.mypy]
 python_version = "3.11"

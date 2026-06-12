@@ -6,6 +6,21 @@ mark milestones rather than released versions.
 
 ## [Unreleased]
 
+### Added
+- **WS8 / supply-chain + CI hardening (2026-06-11):** Dependabot watching `pip` and
+  `github-actions` ecosystems (weekly); a separate `security` CI job running `pip-audit
+  --strict` (known-CVE deps via the full `uv sync --all-extras` env), `gitleaks-action`
+  (secrets scan, with `.env.example`/`config.py` LOCAL-ONLY placeholders allowlisted in
+  `.gitleaks.toml`), and `lychee-action` (markdown link check across all `**/*.md`); the
+  same `gitleaks` hook added to pre-commit. Workflow itself hardened: top-level
+  `permissions: contents: read` (widen per-job only where needed), every action SHA-pinned
+  with a `# v<major>` comment (so Dependabot can bump). Ruff `select` extended with the
+  `S` ruleset (flake8-bandit); 4 false positives noqa'd inline (S105 LOCAL-ONLY
+  placeholders in `config.py`, S608 string-templated `text(...)` SQL that interpolates
+  hardcoded `WWI_TABLES` schema/table names, not user input) and `S101` (`assert` in
+  tests) per-file-ignored under `tests/`. Finally untracked the 6 committed `.idea/*`
+  files (`.idea/` was already in `.gitignore` — they just predated it).
+
 ### Removed
 - **WS1 / dependency hygiene (2026-06-11):** dropped three spurious entries from the
   *main* `pyproject.toml` `dependencies` array: `operators>=1.0.1` (an unrelated PyPI package
