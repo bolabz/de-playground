@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from pyspark.sql import SparkSession
 
-from ..config import settings
+from de_playground.config import settings
 
 # Hadoop 3.3.4 ships with Spark 3.5; the S3A jars must match it.
 _S3A_PACKAGES = [

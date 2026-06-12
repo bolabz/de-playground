@@ -219,7 +219,7 @@ flowchart TD
 
 **Exit:** clean dependency tree, suite green, `uv lock` committed.
 
-### WS2 — Imports: absolute + ruff rule expansion
+### WS2 — Imports: absolute + ruff rule expansion ✅ landed 2026-06-11
 
 1. Convert all 28 relative-import sites in `src/` to absolute (`from de_playground.common.lake
    import s3a`). Mechanical; `ruff --fix` won't do it, but it's a contained find-replace per

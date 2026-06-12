@@ -10,9 +10,9 @@ import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError, EndpointConnectionError
 
-from ..config import settings
-from .logging import get_logger
-from .retry import retry_until
+from de_playground.common.logging import get_logger
+from de_playground.common.retry import retry_until
+from de_playground.config import settings
 
 log = get_logger(__name__)
 

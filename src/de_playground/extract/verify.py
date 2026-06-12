@@ -17,9 +17,9 @@ import os
 import pyarrow.dataset as ds
 from sqlalchemy import create_engine, text
 
-from ..common.lake import pyarrow_s3
-from ..config import settings
-from .tables import WWI_TABLES
+from de_playground.common.lake import pyarrow_s3
+from de_playground.config import settings
+from de_playground.extract.tables import WWI_TABLES
 
 
 def bronze_counts() -> dict[str, int]:
@@ -37,7 +37,7 @@ def source_counts() -> dict[str, int]:
     with engine.connect() as conn:
         for spec in WWI_TABLES:
             n = conn.execute(
-                # noqa: S608 — spec.schema/spec.table come from hardcoded WWI_TABLES, not user input.
+
                 text(f"SELECT COUNT(*) FROM [{spec.schema}].[{spec.table}]")  # noqa: S608
             ).scalar_one()
             counts[spec.resource_name] = int(n)
@@ -69,7 +69,7 @@ def main() -> None:
         os.environ.setdefault("DE_LOG_FORMAT", "json")
 
     # Lazy import so the env var lands BEFORE the logger configures.
-    from ..common.logging import get_logger
+    from de_playground.common.logging import get_logger
 
     log = get_logger(__name__)
 
@@ -77,7 +77,7 @@ def main() -> None:
     source: dict[str, int] | None
     try:
         source = source_counts()
-    except Exception as exc:  # noqa: BLE001 - source check is best-effort
+    except Exception as exc:
         log.warning("source comparison skipped", extra={"reason": str(exc)})
         source = None
 

@@ -51,12 +51,28 @@ line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-# pycodestyle, pyflakes, isort, pyupgrade, bugbear, flake8-bandit (security; WS8)
-select = ["E", "F", "I", "UP", "B", "S"]
+# pycodestyle, pyflakes, isort, pyupgrade, bugbear, flake8-bandit (security; WS8),
+# tidy-imports + ruff-misc + simplify + pathlib + pytest + logging + return + comprehensions
+# (WS2). Hard-wins on architecture (TID), readability (SIM/RET/C4), correctness (LOG/G),
+# style (PT), and modernization (PTH).
+select = [
+  "E", "F", "I", "UP", "B", "S",
+  "TID", "RUF", "SIM", "PTH", "PT", "LOG", "G", "RET", "C4",
+]
 
 [tool.ruff.lint.per-file-ignores]
 # `assert` is idiomatic in pytest; flake8-bandit's S101 would flag every test.
 "tests/**/*.py" = ["S101"]
+# verify.py + inspect_lake.py format human-readable pretty-output lines as the log msg
+# itself (the structured/JSON branch goes via `extra=`); G004 (f-string in log msg) is the
+# explicit chosen idiom there, not a bug.
+"src/de_playground/extract/verify.py" = ["G004"]
+"src/de_playground/transform/inspect_lake.py" = ["G004"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# TID252: ban relative imports — WS2 converted all 38 sites to absolute. Layer enforcement
+# (which package may import which) is import-linter's job (WS3), not ruff.
+ban-relative-imports = "all"
 
 [tool.mypy]
 python_version = "3.11"

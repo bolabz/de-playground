@@ -43,7 +43,7 @@ def build_query(q: str | None, customer_id: int | None, min_total: float | None)
 def health() -> dict:
     try:
         return {"ok": True, "elasticsearch": es.ping(), "es_url": ES_URL}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"ok": False, "error": str(exc), "es_url": ES_URL}
 
 

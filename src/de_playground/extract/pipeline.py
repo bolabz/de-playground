@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import dlt
 
-from ..common.lake import ensure_bucket
-from ..common.logging import get_logger, set_correlation_id
-from ..config import settings
-from .source import wwi_resources
+from de_playground.common.lake import ensure_bucket
+from de_playground.common.logging import get_logger, set_correlation_id
+from de_playground.config import settings
+from de_playground.extract.source import wwi_resources
 
 log = get_logger(__name__)
 

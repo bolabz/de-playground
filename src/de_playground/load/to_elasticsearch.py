@@ -17,10 +17,10 @@ from deltalake import DeltaTable
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 
-from ..common.lake import delta_storage_options
-from ..common.logging import get_logger, set_correlation_id
-from ..common.retry import retry_until
-from ..config import settings
+from de_playground.common.lake import delta_storage_options
+from de_playground.common.logging import get_logger, set_correlation_id
+from de_playground.common.retry import retry_until
+from de_playground.config import settings
 
 log = get_logger(__name__)
 

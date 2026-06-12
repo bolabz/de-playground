@@ -6,6 +6,19 @@ mark milestones rather than released versions.
 
 ## [Unreleased]
 
+### Changed
+- **WS2 / absolute imports + expanded ruff set (2026-06-11):** converted all 50 `from
+  ..`/`from .` sites in `src/de_playground/` and `api/` to absolute (`from de_playground.X
+  import Y`); enabled ruff's TID252 (`ban-relative-imports = "all"`) so new code can't
+  regress. Expanded the `select` array with `TID, RUF, SIM, PTH, PT, LOG, G, RET, C4` —
+  high-signal sets the source plan calls out (architecture, simplification, pathlib,
+  pytest style, logging correctness, return-statement linting, comprehensions). Inline
+  fixes for the in-tree hits: 3 RUF100 (unused noqa) auto-removed, 2 I001 (import sort)
+  auto-fixed; G004 (f-string in log msg) per-file-ignored on `verify.py` +
+  `inspect_lake.py` (their f-strings format the pretty-output line — the structured/JSON
+  branch goes via `extra=`, so G004 there flags an intentional idiom, not a bug). Cross-
+  module *layer* enforcement is import-linter's job (WS3), not ruff.
+
 ### Added
 - **WS8 / supply-chain + CI hardening (2026-06-11):** Dependabot watching `pip` and
   `github-actions` ecosystems (weekly); a separate `security` CI job running `pip-audit

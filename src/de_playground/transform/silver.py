@@ -13,9 +13,9 @@ from dataclasses import dataclass
 from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
 
-from ..common.lake import ensure_bucket, s3a
-from ..common.logging import get_logger
-from ..config import settings
+from de_playground.common.lake import ensure_bucket, s3a
+from de_playground.common.logging import get_logger
+from de_playground.config import settings
 
 log = get_logger(__name__)
 

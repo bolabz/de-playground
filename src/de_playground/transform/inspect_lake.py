@@ -16,8 +16,8 @@ import os
 import pyarrow.dataset as pads
 from deltalake import DeltaTable
 
-from ..common.lake import delta_storage_options, pyarrow_s3
-from ..config import settings
+from de_playground.common.lake import delta_storage_options, pyarrow_s3
+from de_playground.config import settings
 
 # layer -> (format, settings bucket attr, tables)
 _LAYERS: dict[str, tuple[str, str, list[str]]] = {
@@ -87,7 +87,9 @@ def main() -> None:
     if args.json:
         os.environ.setdefault("DE_LOG_FORMAT", "json")
 
-    from ..common.logging import get_logger  # lazy: respect DE_LOG_FORMAT set just above
+    from de_playground.common.logging import (
+        get_logger,  # lazy: respect DE_LOG_FORMAT set just above
+    )
 
     log = get_logger(__name__)
 

@@ -26,10 +26,10 @@ import dlt
 from dlt.extract.resource import DltResource
 from sqlalchemy import create_engine, text
 
-from ..common.lake import ensure_bucket
-from ..common.logging import get_logger, set_correlation_id
-from ..config import settings
-from .tables import WWI_TABLES, TableSpec
+from de_playground.common.lake import ensure_bucket
+from de_playground.common.logging import get_logger, set_correlation_id
+from de_playground.config import settings
+from de_playground.extract.tables import WWI_TABLES, TableSpec
 
 log = get_logger(__name__)
 

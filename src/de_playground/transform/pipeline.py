@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import sys
 
-from ..common.spark import get_spark
-from .gold import build_gold
-from .silver import build_silver
-from .silver_cdc import build_silver_cdc
+from de_playground.common.spark import get_spark
+from de_playground.transform.gold import build_gold
+from de_playground.transform.silver import build_silver
+from de_playground.transform.silver_cdc import build_silver_cdc
 
 _STAGES = ("all", "silver", "gold", "silver-cdc")
 

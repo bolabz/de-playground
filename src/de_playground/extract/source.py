@@ -16,7 +16,7 @@ import dlt
 from dlt.extract.resource import DltResource
 from dlt.sources.sql_database import sql_table
 
-from .tables import WWI_TABLES, TableSpec
+from de_playground.extract.tables import WWI_TABLES, TableSpec
 
 
 def _resource(spec: TableSpec, credentials: str) -> DltResource:
