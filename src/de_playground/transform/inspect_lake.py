@@ -116,9 +116,20 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    import sys
+
     main()
-    # delta-rs keeps non-daemon Rust threads alive after main() returns; without an explicit
-    # exit, Python waits on them and a redirected `> file 2>&1` invocation never terminates.
-    # Pipe-to-consumer invocations work because SIGPIPE kills the process — but the regression
-    # oracle (`make baseline`/`make regression`) writes to a file, so it hits the hang.
+    # delta-rs spawns non-daemon Rust threads inside DeltaTable.to_pyarrow_dataset(); without
+    # an explicit exit Python's interpreter shutdown waits on them, and a redirected
+    # `> file 2>&1` invocation never terminates (the data IS written; the process just
+    # lingers). Pipe-to-consumer invocations work because SIGPIPE kills the process, but the
+    # regression oracle (`make baseline`/`make regression`) writes to a file.
+    #
+    # os._exit bypasses atexit/finally and Python's I/O shutdown — but main() above has
+    # already flushed every log record via logging.StreamHandler, so the only data still in
+    # buffers is whatever may have been written *after* main() returned. Nothing in this
+    # script writes there. Defensive: flush stdout/stderr at the OS level too, so a future
+    # consumer that adds a trailing log line still sees it.
+    sys.stdout.flush()
+    sys.stderr.flush()
     os._exit(0)

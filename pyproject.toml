@@ -128,9 +128,10 @@ useLibraryCodeForTypes = true
 # Pyright bundles minimal type info for boto3-stubs at the `mypy_boto3_*` namespace
 # (mypy-style stubs but not always pyright-friendly); accept the slack.
 reportMissingImports = "warning"
-# PySpark's classproperty descriptor (e.g. SparkSession.builder) confuses pyright stubs;
-# downgrade these to warnings rather than gate on them.
-reportAttributeAccessIssue = "warning"
+# NOTE: previously had a global `reportAttributeAccessIssue = "warning"` to silence
+# pyright's confusion with PySpark's classproperty (SparkSession.builder.appName).
+# That global downgrade could mask real attribute errors; instead, the one PySpark-stub
+# false positive is suppressed inline at common/spark.py:33 via `# pyright: ignore`.
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

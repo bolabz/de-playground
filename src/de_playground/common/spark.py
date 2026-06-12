@@ -30,7 +30,9 @@ _S3A_PACKAGES = [
 def _base_builder(app_name: str, master: str) -> SparkSession.Builder:
     """Shared config: Delta SQL extensions + S3A pointed at SeaweedFS."""
     return (
-        SparkSession.builder.appName(app_name)
+        # PySpark stubs declare `builder` as a classproperty; pyright can't see through to
+        # the Builder methods, but the API is well-defined and verified by mypy + runtime.
+        SparkSession.builder.appName(app_name)  # pyright: ignore[reportAttributeAccessIssue]
         .master(master)
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config(
