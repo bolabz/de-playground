@@ -22,12 +22,12 @@ import pytest
 # pytest gets a chance to consult the `pyspark` marker.
 pytest.importorskip("pyspark")
 
-from de_playground.transform.gold import (  # noqa: E402
+from de_playground.transform.gold import (
     build_fact_invoices,
     build_fact_sales,
 )
-from de_playground.transform.silver import conform  # noqa: E402
-from de_playground.transform.silver_cdc import collapse_changes  # noqa: E402
+from de_playground.transform.silver import conform
+from de_playground.transform.silver_cdc import collapse_changes
 
 pytestmark = pytest.mark.pyspark
 
