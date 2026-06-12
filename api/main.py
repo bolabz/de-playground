@@ -81,7 +81,7 @@ def search(
 @app.get("/sales/{order_line_id}", response_model=FactSalesDoc)
 def get_one(order_line_id: int) -> FactSalesDoc:
     try:
-        doc = es.get(index=INDEX_FACT_SALES, id=order_line_id)
+        doc = es.get(index=INDEX_FACT_SALES, id=str(order_line_id))
     except NotFoundError as err:
         raise HTTPException(
             status_code=404, detail=f"order_line_id {order_line_id} not found"

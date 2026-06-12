@@ -25,8 +25,11 @@ cp .env.example .env                         # local-only placeholders; .env is 
 
 ## Conventions
 
-- **Formatting/linting:** `ruff` (line length 100) + `mypy` (strict). Run `make lint`.
-  Every module uses `from __future__ import annotations` and type hints.
+- **Formatting/linting:** `ruff` (line length 100; expanded `select` with TID/RUF/SIM/PTH/
+  PT/LOG/G/RET/C4/S) + `mypy --strict` (scoped overrides for Spark/dlt/pyarrow-touching
+  modules) + `pyright` (standard mode; editor-strict recommended) + `import-linter`
+  (layered architecture). Run `make lint` for ruff; CI runs the rest. Every module uses
+  `from __future__ import annotations` and type hints; relative imports are banned (TID252).
 - **Config, not constants:** all connection info, credentials, bucket names, and endpoints
   come from `de_playground.config.settings` (pydantic-settings, read from `.env`). Don't
   hardcode hosts/keys/paths in modules.

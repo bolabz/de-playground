@@ -30,8 +30,11 @@ jobs:
       - name: Format check (ruff)
         run: uv run ruff format --check .
 
-      - name: Type check (mypy)
+      - name: Type check (mypy --strict, scoped)
         run: uv run mypy src
+
+      - name: Type check (pyright, standard)
+        run: uv run pyright src api
 
       - name: Architecture (import-linter)
         run: uv run lint-imports

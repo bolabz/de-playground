@@ -17,8 +17,11 @@ from de_playground.common.retry import retry_until
 from de_playground.config import settings
 
 if TYPE_CHECKING:
-    import pyarrow.fs as pafs
     from mypy_boto3_s3 import S3Client
+
+    # pyarrow doesn't explicitly re-export S3FileSystem from pyarrow.fs (no __all__),
+    # and strict mypy turns off implicit_reexport — silence that here only.
+    from pyarrow.fs import S3FileSystem  # type: ignore[attr-defined]
 
 log = get_logger(__name__)
 
@@ -100,13 +103,13 @@ def s3a(bucket: str, *parts: str) -> str:
     return f"s3a://{bucket}/{suffix}" if suffix else f"s3a://{bucket}"
 
 
-def pyarrow_s3() -> pafs.S3FileSystem:
+def pyarrow_s3() -> S3FileSystem:
     """A pyarrow S3 filesystem pointed at SeaweedFS (for reading Bronze Parquet)."""
     import pyarrow.fs as pafs  # lazy: pyarrow only needed by readers
 
     host = settings.s3_endpoint_url.split("://", 1)[-1]  # strip scheme -> host:port
     scheme = "https" if settings.s3_endpoint_url.startswith("https") else "http"
-    return pafs.S3FileSystem(
+    return pafs.S3FileSystem(  # type: ignore[attr-defined]  # pyarrow.fs lacks __all__
         access_key=settings.s3_access_key,
         secret_key=settings.s3_secret_key,
         endpoint_override=host,

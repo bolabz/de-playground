@@ -7,6 +7,22 @@ mark milestones rather than released versions.
 ## [Unreleased]
 
 ### Added
+- **WS4 6c / mypy --strict (scoped) + pyright standard as CI gates (2026-06-11):**
+  pyproject.toml `[tool.mypy] strict = true` with scoped overrides for
+  `transform.*`, `extract.source`, `extract.cdc`, `extract.verify`,
+  `load.to_elasticsearch` (the modules that work with untyped PySpark / dlt / pyarrow /
+  delta-rs / elasticsearch internals — strict-checking them produces noise about third-
+  party libs rather than real bugs). The explicit-contract boundaries (`config`,
+  `common/lake`, `common/logging`, `common/retry`, `contracts`, `extract/tables`) stay
+  unconditionally strict. `ignore_missing_imports = true` kept (untyped DE libs).
+  `[tool.pyright]` runs in standard mode in CI alongside mypy; editor-strict recommended
+  for live feedback. Both CI gates green: `mypy --strict src` (24 source files) and
+  `pyright src api` (0 errors). Targeted noqa/type:ignore inline for the boto3-stubs +
+  pyarrow.fs implicit-reexport interactions; one real pyright catch became a code change
+  (api/main.py `es.get(id=...)` wants str, not int — cast on the call site).
+  CONTRIBUTING.md "Conventions" line updated to reflect the now-true `mypy --strict`
+  claim and the expanded ruff set + pyright + import-linter pipeline.
+
 - **WS4 6b / typed DI seam + lake helpers + exception precision + py.typed (2026-06-11):**
   - `config.py` grows an `@lru_cache get_settings()` factory; `settings = get_settings()`
     stays as a backward-compat alias so existing consumers don't need touching. New code

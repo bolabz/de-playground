@@ -258,7 +258,7 @@ codebases where a full map isn't feasible up front.)
 **Exit:** `lint-imports` passes and is a required CI check; a deliberately-wrong import (e.g.
 `common` importing `transform`) fails it locally.
 
-### WS4 — Typed contract boundaries (Pydantic + mypy-strict + pyright)
+### WS4 — Typed contract boundaries (Pydantic + mypy-strict + pyright) ✅ landed 2026-06-11 (commits 6a/6b/6c)
 
 This is the heart of "type safety at the contract boundaries." The Spark transforms keep
 returning `DataFrame`; we type the *edges* where structure is knowable.
