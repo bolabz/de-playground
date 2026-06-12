@@ -14,11 +14,10 @@ Operation codes: 1=delete, 2=insert, 3=update(before), 4=update(after). Ordering
 
 from __future__ import annotations
 
-from pyspark.errors import AnalysisException
 from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
 
-from de_playground.common.lake import ensure_bucket, s3a
+from de_playground.common.lake import bronze_cdc_prefix_exists, ensure_bucket, s3a
 from de_playground.common.logging import get_logger
 from de_playground.config import settings
 from de_playground.transform.silver import SILVER_TABLES, SilverSpec
@@ -45,18 +44,16 @@ def build_silver_cdc(spark: SparkSession, specs: list[SilverSpec] = SILVER_TABLE
     for spec in specs:
         src = s3a(settings.bronze_bucket, "wwi_cdc", spec.table)
         dst = s3a(settings.silver_bucket, "wwi_cdc", spec.table)
-        try:
-            feed = spark.read.parquet(src)
-        except AnalysisException as err:
-            # CDC only writes a Bronze folder for tables that had changes; a missing path
-            # just means no changes captured for this table yet.
-            if "PATH_NOT_FOUND" in str(err) or "Path does not exist" in str(err):
-                log.info(
-                    "silver-cdc skipped — no CDC changes captured yet",
-                    extra={"table": spec.table},
-                )
-                continue
-            raise
+        # CDC only writes a Bronze folder for tables that had changes — pre-check via
+        # boto3 list_objects_v2 instead of trying to read and matching the AnalysisException
+        # message string (WS4 6b: replaces the brittle "PATH_NOT_FOUND" substring check).
+        if not bronze_cdc_prefix_exists(spec.table):
+            log.info(
+                "silver-cdc skipped — no CDC changes captured yet",
+                extra={"table": spec.table},
+            )
+            continue
+        feed = spark.read.parquet(src)
         out = collapse_changes(feed, spec.primary_key)
         out.write.format("delta").mode("overwrite").save(dst)
         log.info(

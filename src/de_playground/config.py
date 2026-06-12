@@ -12,6 +12,8 @@ All defaults below are LOCAL-ONLY placeholders — real values come from a gitig
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -62,4 +64,15 @@ class Settings(BaseSettings):
         ).render_as_string(hide_password=False)
 
 
-settings = Settings()
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    """Cached factory — same semantics as the module-level singleton, but tests can
+    override via dependency injection or `get_settings.cache_clear()`. Nothing runs at
+    import time. WS4 (DI seam) — full constructor injection is P2 (WS9)."""
+    return Settings()
+
+
+# Backward-compat alias. Existing consumers do `from de_playground.config import settings`
+# and read `settings.s3_endpoint_url` etc.; that still works. New code should call
+# `get_settings()` explicitly so tests can swap.
+settings = get_settings()

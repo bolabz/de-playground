@@ -16,6 +16,7 @@ import os
 
 import pyarrow.dataset as ds
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 
 from de_playground.common.lake import pyarrow_s3
 from de_playground.config import settings
@@ -76,7 +77,12 @@ def main() -> None:
     source: dict[str, int] | None
     try:
         source = source_counts()
-    except Exception as exc:
+    except (SQLAlchemyError, OSError) as exc:
+        # Narrowed (WS4 6b): SQLAlchemyError covers the DBAPI/connection failures (pyodbc
+        # bubbles its own errors as DBAPIError, a SQLAlchemyError subclass); OSError covers
+        # network unreachable / DNS. Pipeline-up SQL Server is the common case, but the
+        # source-vs-Bronze comparison is best-effort by design and should fall back to
+        # bronze-only without aborting the verify run.
         log.warning("source comparison skipped", extra={"reason": str(exc)})
         source = None
 

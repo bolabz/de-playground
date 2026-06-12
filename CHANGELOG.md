@@ -7,6 +7,24 @@ mark milestones rather than released versions.
 ## [Unreleased]
 
 ### Added
+- **WS4 6b / typed DI seam + lake helpers + exception precision + py.typed (2026-06-11):**
+  - `config.py` grows an `@lru_cache get_settings()` factory; `settings = get_settings()`
+    stays as a backward-compat alias so existing consumers don't need touching. New code
+    should call `get_settings()` so tests can override via `get_settings.cache_clear()`.
+    Full constructor injection is P2 (WS9).
+  - `common/lake.py` `s3_client()` and `pyarrow_s3()` get proper return types
+    (`mypy_boto3_s3.S3Client`, `pyarrow.fs.S3FileSystem`) under `TYPE_CHECKING`. Turns
+    the `boto3-stubs~=1.43.0` dep (kept in WS1) into actual enforcement.
+  - New `common/lake.bronze_cdc_prefix_exists(table)` boto3 list-objects pre-check;
+    `transform/silver_cdc.py` uses it instead of catching `AnalysisException` and
+    string-matching `"PATH_NOT_FOUND"`/`"Path does not exist"` (Finding 6, brittle string
+    flow control). Same observable "skipped — no CDC changes captured yet" behavior.
+  - `extract/verify.py:79` `except Exception` narrowed to `(SQLAlchemyError, OSError)` —
+    pyodbc/connection failures bubble as SQLAlchemyError subclasses (DBAPIError); OSError
+    covers DNS / network unreachable. Source-vs-Bronze comparison stays best-effort.
+  - `src/de_playground/py.typed` (PEP 561 marker) + minimal `__all__` in
+    `src/de_playground/__init__.py` so downstream consumers get the typed surface.
+
 - **WS4 6a / typed cross-plane contracts (2026-06-11):** new
   `src/de_playground/contracts.py` defines the shared Pydantic models — `FactSalesDoc`,
   `SalesSearchQuery`, `SalesSearchResult` — plus the single canonical `INDEX_FACT_SALES`

@@ -6,6 +6,8 @@ bucket names and path layout in one place so Silver/Gold code reads cleanly.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError, EndpointConnectionError
@@ -14,14 +16,21 @@ from de_playground.common.logging import get_logger
 from de_playground.common.retry import retry_until
 from de_playground.config import settings
 
+if TYPE_CHECKING:
+    import pyarrow.fs as pafs
+    from mypy_boto3_s3 import S3Client
+
 log = get_logger(__name__)
 
 
-def s3_client(admin: bool = False):
+def s3_client(admin: bool = False) -> S3Client:
     """boto3 S3 client for SeaweedFS (path-style).
 
     `admin=True` uses admin creds (bucket creation / management); the default uses the
     least-privilege app identity (Read/Write/List) the pipeline runs as.
+
+    Return type is `mypy_boto3_s3.S3Client` (provided by the `boto3-stubs` dep, WS1) so
+    callers get full method/parameter completion at the typed boundary.
     """
     if admin:
         import os
@@ -91,7 +100,7 @@ def s3a(bucket: str, *parts: str) -> str:
     return f"s3a://{bucket}/{suffix}" if suffix else f"s3a://{bucket}"
 
 
-def pyarrow_s3():
+def pyarrow_s3() -> pafs.S3FileSystem:
     """A pyarrow S3 filesystem pointed at SeaweedFS (for reading Bronze Parquet)."""
     import pyarrow.fs as pafs  # lazy: pyarrow only needed by readers
 
@@ -103,6 +112,21 @@ def pyarrow_s3():
         endpoint_override=host,
         scheme=scheme,
     )
+
+
+def bronze_cdc_prefix_exists(table: str) -> bool:
+    """True if `bronze/wwi_cdc/<table>/` contains any objects.
+
+    Used by `silver_cdc` to skip tables that had no CDC changes captured yet — replaces
+    the previous string-match-on-exception-message check in silver_cdc.py (WS4 6b).
+    """
+    s3 = s3_client()
+    resp = s3.list_objects_v2(
+        Bucket=settings.bronze_bucket,
+        Prefix=f"wwi_cdc/{table}/",
+        MaxKeys=1,
+    )
+    return "Contents" in resp and bool(resp["Contents"])
 
 
 def delta_storage_options() -> dict[str, str]:
