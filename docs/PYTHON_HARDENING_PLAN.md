@@ -324,7 +324,7 @@ suites signal missing boundaries.* Apply incrementally.
 
 **Exit:** pure-function coverage in CI; Spark tests runnable under the marker; coverage reported.
 
-### WS6 — CI coverage gate (diff coverage, not a vanity threshold)
+### WS6 — CI coverage gate (diff coverage, not a vanity threshold) ✅ landed 2026-06-11
 
 Decision: **gate the diff, report the total.** A hard global `--cov-fail-under=85` would be
 coverage theater here — you're starting from low coverage and the Spark suite can't run in the

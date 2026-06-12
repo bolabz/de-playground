@@ -138,6 +138,22 @@ markers = [
 # Skip the pyspark marker by default; explicit -m pyspark in CI to run them.
 addopts = "-m 'not pyspark'"
 
+# WS6: coverage scope. Omit transform.* + extract.cdc from the default measurement —
+# they're Spark/dlt-heavy and the default Java-free CI can't run their tests, so leaving
+# them in would drag the total coverage number into nonsense. They're measured separately
+# in the opt-in `pyspark` job. diff-cover's --fail-under = 80% on changed lines (not total).
+[tool.coverage.run]
+source = ["de_playground"]
+omit = [
+    "src/de_playground/transform/*",
+    "src/de_playground/extract/cdc.py",
+    "src/de_playground/extract/source.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
 # ---- Architecture enforcement (import-linter, WS3) -------------------------------------
 # Three contracts that machine-check the layering in docs/PYTHON_HARDENING_PLAN.md
 # "Target shape". Exhaustive ON: every new sub-package of de_playground must be placed in

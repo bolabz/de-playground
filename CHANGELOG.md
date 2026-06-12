@@ -7,6 +7,20 @@ mark milestones rather than released versions.
 ## [Unreleased]
 
 ### Added
+- **WS6 / diff-coverage gate at 80% of changed lines (2026-06-11):** CI's `quality` job
+  now runs `pytest --cov=de_playground --cov-report=xml --cov-report=term` (total
+  coverage reported, not gated). PRs additionally run
+  `diff-cover coverage.xml --compare-branch=origin/<base> --fail-under=80` — each change
+  must cover ≥80% of its own new/changed lines. Total threshold would be coverage
+  theater (Spark suite can't run in default CI; legacy gaps would distort the number) —
+  diff-cover is the 2026 consensus pattern for "rewards small well-tested commits
+  without a flag-day backfill". `[tool.coverage.run] omit` keeps
+  `transform.*`/`extract.cdc`/`extract.source` out of the default measurement (they're
+  Spark/dlt-heavy; measured separately in the opt-in `pyspark` job). Current state: 57%
+  total on the Java-free measurement, with the new contracts/config/extract.tables at
+  100%; this WS5+WS6 PR itself reports 85% diff coverage. `.gitignore` adds
+  `.coverage` + `coverage.xml`.
+
 - **WS5 / pure-function + hypothesis + spark-marker tests (2026-06-11):** the pure-fn
   testing gap from BACKLOG / Finding 7 is filled. New files:
     - `tests/test_contracts.py` — `build_query` parametrize matrix (8 combos) + hypothesis

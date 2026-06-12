@@ -39,8 +39,20 @@ jobs:
       - name: Architecture (import-linter)
         run: uv run lint-imports
 
-      - name: Tests (pytest, DB-free)
-        run: uv run pytest
+      - name: Tests (pytest, DB-free) + coverage XML
+        run: uv run pytest --cov=de_playground --cov-report=xml --cov-report=term
+
+      - name: Diff coverage gate (>=80% of changed lines vs main)
+        # Total coverage is reported in the step above (visibility); the *gate* is on the
+        # patch: each PR must cover >=80% of its own new/changed lines. See WS6 in
+        # docs/PYTHON_HARDENING_PLAN.md — vanity total thresholds would be coverage theater
+        # given the Spark suite can't run in default CI.
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          uv run --with diff-cover diff-cover coverage.xml \
+            --compare-branch=origin/${{ github.base_ref }} \
+            --fail-under=80
 
   security:
     runs-on: ubuntu-latest
