@@ -115,3 +115,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+    # delta-rs keeps non-daemon Rust threads alive after main() returns; without an explicit
+    # exit, Python waits on them and a redirected `> file 2>&1` invocation never terminates.
+    # Pipe-to-consumer invocations work because SIGPIPE kills the process — but the regression
+    # oracle (`make baseline`/`make regression`) writes to a file, so it hits the hang.
+    os._exit(0)
