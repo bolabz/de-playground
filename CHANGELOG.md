@@ -7,6 +7,21 @@ mark milestones rather than released versions.
 ## [Unreleased]
 
 ### Added
+- **WS7 / uv workspaces; api/ promoted to its own pyproject (2026-06-11):** root
+  `pyproject.toml` declares `[tool.uv.workspace] members = ["api"]`. New
+  `api/pyproject.toml` owns the serving-plane deps (`fastapi`, `uvicorn[standard]`,
+  `elasticsearch`, `opentelemetry-distro`, `opentelemetry-exporter-otlp`). The root `serve`
+  extra is gone (deps moved out, killing the duplication between extras and the
+  Dockerfile that Finding 11 called out — `provides-extras` now `["process", "eda",
+  "dev"]`). `api/Dockerfile` rebuilt: pulls `uv` from the official distroless image then
+  `uv pip install --system --no-cache .` against the workspace member — no inline pinned
+  versions, single source of truth in `api/pyproject.toml`. `api/` declares **no**
+  dependency on `de_playground` (serving-plane isolation, same boundary import-linter
+  would enforce if api/ ever grew a package). `jobs/` stays in the core lib (it's a
+  ~40-line spark-submit driver whose only dep IS de_playground[process]). Verified: `make
+  regression` empty after `docker compose up -d --build api`; `/health` + 3 canonical
+  queries identical to baseline.
+
 - **WS3 / architecture enforced by import-linter (2026-06-11):** three contracts in
   `pyproject.toml` `[tool.importlinter]` machine-check the layering the docs assert.
   Layered architecture (`extract | transform | load` peers → `common` → `config`) with

@@ -70,7 +70,8 @@ it in the PR.
 
 ## uv extras (avoid the churn)
 
-Deps are split into extras (`process`=Spark, `serve`=ES/FastAPI, `eda`, `dev`). `uv sync
+Deps are split into extras (`process`=Spark, `eda`, `dev`); the FastAPI service moved out
+to its own workspace member `api/pyproject.toml` (WS7). `uv sync
 --extra X` installs X and *removes* the others — so switching phases can uninstall PySpark.
 Use **`make sync-all`** to keep everything installed at once.
 

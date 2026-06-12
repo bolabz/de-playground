@@ -23,11 +23,6 @@ process = [
     "pyspark==3.5.8",               # transforms Bronze->Silver->Gold (needs a JDK 17 on host)
     "delta-spark==3.2.1",           # Delta 3.2 pairs with Spark 3.5; pulls the matching jar
 ]
-serve = [
-    "fastapi>=0.111",
-    "uvicorn[standard]>=0.30",
-    "elasticsearch>=8.14,<9",       # match the ES server major
-]
 eda = [
     "pandas>=2.2",                  # edges only: EDA samples + last-mile QA
     "polars>=1.0",                  # fast single-machine alternative
@@ -46,6 +41,13 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/de_playground"]
+
+# uv workspace (WS7): the root project (this file) is the core de_playground library; api/
+# is a separate member with its own deps and Dockerfile. Single shared lockfile across
+# members. jobs/ stays in the core library — it's a thin spark-submit driver whose only
+# deps are de_playground itself, so a separate pyproject would be packaging ceremony.
+[tool.uv.workspace]
+members = ["api"]
 
 [tool.ruff]
 line-length = 100

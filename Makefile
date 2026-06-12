@@ -25,8 +25,8 @@ sync:  ## Install base deps into the venv (uv)
 	uv sync
 
 .PHONY: sync-all
-sync-all:  ## Install all optional groups (process, serve, eda, dev)
-	uv sync --all-extras
+sync-all:  ## Install all optional groups (process, eda, dev) + workspace members (api)
+	uv sync --all-extras --all-packages
 
 .PHONY: lint
 lint:  ## ruff lint + format check

@@ -345,7 +345,7 @@ consensus for exactly this situation is patch/diff coverage.
 **Exit:** CI fails when a change adds uncovered lines; total coverage is visible but non-blocking;
 Spark code is excluded from the default measurement, not faked.
 
-### WS7 — Monorepo shape: uv workspaces, promote the deployables
+### WS7 — Monorepo shape: uv workspaces, promote the deployables ✅ landed 2026-06-11
 
 Today the repo is a single package (`src/de_playground`) plus loose service dirs (`api/`,
 `jobs/`, `dags/`). The 2026 real-world monorepo shape is a **uv workspace**: multiple

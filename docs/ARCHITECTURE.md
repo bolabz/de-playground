@@ -149,7 +149,7 @@ Agent and captures from enablement forward — the watermark/full extract is the
 
 ```
 de-playground/
-├── pyproject.toml          # deps + metadata (uv-managed); extras: process/serve/eda/dev
+├── pyproject.toml          # core lib deps + uv workspace; extras: process/eda/dev
 ├── uv.lock                 # pinned, committed
 ├── .env.example            # config template; real .env is gitignored
 ├── docker-compose.yml      # the stack (SQL Server, SeaweedFS, Spark cluster, ES, Kibana, FastAPI)
