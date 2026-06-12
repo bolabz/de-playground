@@ -1,0 +1,40 @@
+# Build context for api/Dockerfile is the REPO ROOT (uv-workspace build). Keep it lean — the
+# image only needs pyproject.toml, uv.lock, README.md, api/, and src/de_playground/. Everything
+# below is irrelevant to that build (and .git/.venv/data are large or secret), so exclude it.
+# NOTE: this applies to any build whose context is the repo root (api via `make api-push` and
+# compose's `context: ..`); other images (spark/) build from their own dirs and are unaffected.
+
+# VCS, envs, secrets, IDE, dev-container
+.git
+.github
+.venv
+.env
+.idea
+.devcontainer
+
+# Caches + build/scratch artifacts
+.mypy_cache
+.pytest_cache
+.ruff_cache
+**/__pycache__
+*.py[cod]
+*.egg-info
+dist
+build
+.coverage
+coverage.xml
+requirements-audit.txt
+
+# Large or irrelevant to the api image
+data
+notebooks
+docs
+tests
+sql
+kibana
+spark
+compose
+platform
+observability
+dags
+jobs

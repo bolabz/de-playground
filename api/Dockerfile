@@ -11,10 +11,13 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# Layer ordering for cache-friendliness: deps + minimal-source first, then app sources.
 # README.md is required by hatchling because the root pyproject declares `readme = "README.md"`.
 COPY pyproject.toml uv.lock README.md ./
-COPY api/pyproject.toml api/__init__.py ./api/
+# Copy the WHOLE api/ package (incl. main.py) before the install: api/pyproject.toml
+# force-includes both __init__.py and main.py into the de-playground-api wheel, so they must
+# exist when the install below builds it. (Copying main.py after the install — for layer-cache
+# reasons — is impossible here: the wheel bundles it, so the install would fail to build.)
+COPY api/pyproject.toml api/__init__.py api/main.py ./api/
 COPY src/de_playground ./src/de_playground/
 
 # Install the api workspace member + its de_playground dep, into the system Python. The api
@@ -22,9 +25,6 @@ COPY src/de_playground ./src/de_playground/
 # mypy, and pyright see it in source — no analysis-vs-runtime divergence.
 RUN uv pip install --system --no-cache . ./api/ \
  && opentelemetry-bootstrap -a install      # auto-install instrumentation for installed libs
-
-# main.py copied separately so a code-only change doesn't bust the deps install layer above.
-COPY api/main.py ./api/
 
 EXPOSE 8000
 # WORKDIR stays at /app so `api.main:app` resolves against the installed package; uvicorn

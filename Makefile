@@ -255,9 +255,13 @@ api-push:  ## Phase 5c: build the API image + push to the k3d registry (tags: gi
 		echo "working tree dirty — commit code first (the image is tagged with HEAD's SHA)."; exit 1; }
 	@SHA=$$(git rev-parse --short HEAD); \
 	echo "building + pushing $(REGISTRY_PUSH)/$(API_IMAGE):$$SHA (+ :latest)"; \
-	docker build -t $(REGISTRY_PUSH)/$(API_IMAGE):$$SHA -t $(REGISTRY_PUSH)/$(API_IMAGE):latest ./api; \
-	docker push $(REGISTRY_PUSH)/$(API_IMAGE):$$SHA; \
+	docker build -f api/Dockerfile -t $(REGISTRY_PUSH)/$(API_IMAGE):$$SHA -t $(REGISTRY_PUSH)/$(API_IMAGE):latest . && \
+	docker push $(REGISTRY_PUSH)/$(API_IMAGE):$$SHA && \
 	docker push $(REGISTRY_PUSH)/$(API_IMAGE):latest
+	# Build context is the REPO ROOT (not ./api): the Dockerfile is a workspace build that COPYs
+	# pyproject.toml/uv.lock/src/de_playground + api/ — matches compose's `context: ..`. The `&&`
+	# chain fail-fasts: a build error aborts the push (and api-release's chart bump), so the chart
+	# can never point at a SHA tag that was never pushed. See .dockerignore (keeps the context lean).
 
 .PHONY: api-release
 api-release: api-push  ## Phase 5c CD loop: push image, bump the chart tag to the SHA, commit + push (Argo deploys)
