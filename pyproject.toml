@@ -37,6 +37,7 @@ dev = [
     "ruff>=0.5",                    # lint + format (replaces flake8/black/isort)
     "mypy>=1.10",                   # static type checking
     "pytest>=8.0",
+    "import-linter>=2.0",           # architecture enforcement (layers/independence/forbidden)
 ]
 
 [build-system]
@@ -86,3 +87,43 @@ warn_unused_ignores = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# ---- Architecture enforcement (import-linter, WS3) -------------------------------------
+# Three contracts that machine-check the layering in docs/PYTHON_HARDENING_PLAN.md
+# "Target shape". Exhaustive ON: every new sub-package of de_playground must be placed in
+# the layers list or the contract fails — catches architectural drift the moment it lands.
+[tool.importlinter]
+root_packages = ["de_playground"]
+
+[[tool.importlinter.contracts]]
+name = "Layered architecture (config < common < {extract|transform|load})"
+type = "layers"
+exhaustive = true
+containers = ["de_playground"]
+# Sibling layers separated by `|` are independent: cannot import each other.
+layers = [
+    "extract | transform | load",
+    "common",
+    "config",
+]
+
+[[tool.importlinter.contracts]]
+name = "common forbidden from peer layers"
+type = "forbidden"
+source_modules = ["de_playground.common"]
+forbidden_modules = [
+    "de_playground.extract",
+    "de_playground.transform",
+    "de_playground.load",
+]
+
+[[tool.importlinter.contracts]]
+name = "config forbidden from anything else in de_playground"
+type = "forbidden"
+source_modules = ["de_playground.config"]
+forbidden_modules = [
+    "de_playground.common",
+    "de_playground.extract",
+    "de_playground.transform",
+    "de_playground.load",
+]

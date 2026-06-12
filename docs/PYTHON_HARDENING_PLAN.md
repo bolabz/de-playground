@@ -236,7 +236,7 @@ flowchart TD
 
 **Exit:** `ruff check` green with the expanded set; TID252 enforced.
 
-### WS3 — Architecture enforcement with `import-linter`
+### WS3 — Architecture enforcement with `import-linter` ✅ landed 2026-06-11
 
 `import-linter` (current 2.x) reads contracts from `pyproject.toml`/`.importlinter` and runs as
 a CI step (`lint-imports`). Three contract types cover the target shape:

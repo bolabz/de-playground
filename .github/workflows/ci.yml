@@ -33,6 +33,9 @@ jobs:
       - name: Type check (mypy)
         run: uv run mypy src
 
+      - name: Architecture (import-linter)
+        run: uv run lint-imports
+
       - name: Tests (pytest, DB-free)
         run: uv run pytest
 

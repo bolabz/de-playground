@@ -6,6 +6,19 @@ mark milestones rather than released versions.
 
 ## [Unreleased]
 
+### Added
+- **WS3 / architecture enforced by import-linter (2026-06-11):** three contracts in
+  `pyproject.toml` `[tool.importlinter]` machine-check the layering the docs assert.
+  Layered architecture (`extract | transform | load` peers → `common` → `config`) with
+  `exhaustive = true` — every new sub-package must be placed in the layer graph or the
+  contract breaks, so drift is caught the moment it lands. Forbidden contracts:
+  `common` cannot import any of the peers; `config` cannot import anything else in
+  `de_playground`. New `import-linter>=2.0` in the `dev` extra; CI runs `uv run
+  lint-imports` between mypy and pytest; pre-commit gets the upstream hook (v2.5). Gate
+  proven to bite — a deliberately-injected `common.lake -> extract.tables` import is
+  rejected with line numbers; reverted cleanly. Existing codebase passes all 3 contracts
+  on day one (23 files, 40 dependencies analysed).
+
 ### Changed
 - **WS2 / absolute imports + expanded ruff set (2026-06-11):** converted all 50 `from
   ..`/`from .` sites in `src/de_playground/` and `api/` to absolute (`from de_playground.X

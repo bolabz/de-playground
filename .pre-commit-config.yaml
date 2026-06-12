@@ -25,3 +25,8 @@ repos:
     rev: v8.21.2
     hooks:
       - id: gitleaks                  # secrets scan; config in .gitleaks.toml
+
+  - repo: https://github.com/seddonym/import-linter
+    rev: v2.5
+    hooks:
+      - id: import-linter             # layered architecture contracts (pyproject.toml)
