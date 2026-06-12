@@ -48,6 +48,15 @@ tables — make sure you're on the latest `silver_cdc.py`.
 Spark 3.5 supports Java 8/11/17 only (not 21/26). Install JDK 17 (`brew install openjdk@17`);
 the `transform`/`silver`/`gold` targets auto-select it.
 
+**`pytest -m pyspark` fails with `Py4JJavaError: ... None.org.apache.spark.api.java.JavaSparkContext`**
+Same root cause as above — Spark 3.5 trying to start under JDK 21/26. The `spark` fixture
+in `tests/conftest.py` now auto-detects JDK 17 (via `/usr/libexec/java_home` then Homebrew's
+`openjdk@17`) and pins `JAVA_HOME` before SparkSession start; `make test-spark` (or
+`uv run pytest -m pyspark`) Just Works on a host with `brew install openjdk@17` done.
+If detection can't find JDK 17 (rare — e.g. a Linux dev box where openjdk-17 lives at a
+non-standard path), set `JAVA_HOME=/path/to/jdk17` before the command and the fixture will
+trust it.
+
 **`ModuleNotFoundError: No module named 'pyspark'`**
 `uv sync --extra serve` (or any single-extra sync) uninstalled the `process` extra. Use
 `make sync-all` to keep all extras. (Use a Python 3.11 venv — PySpark 3.5 isn't tested on 3.13+/3.14.)
