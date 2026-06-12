@@ -7,21 +7,27 @@ modularity/testing themes into an executable sequence). Reference history in
 [`../CHANGELOG.md`](../CHANGELOG.md); design constraints by intent in
 [`ARCHITECTURE.md`](ARCHITECTURE.md) ("Deliberate non-goals").
 
-> **Status: COMPLETE — P1 series + post-mortem corrections landed 2026-06-11.**
-> Original implementation pass landed in two phases — execution-wrapper precursors (doc
-> sweep, lint fix, Gate-0 oracle target, inspect-hang fix) followed by the 8
-> workstreams (WS1, WS8, WS2, WS3, WS7, WS4 6a/6b/6c, WS5, WS6) and the
-> final-acceptance target. Post-mortem corrections: 8 commits (api isolation made
-> enforceable via
+> **Status: COMPLETE — P1 series + two rounds of post-mortem corrections landed
+> 2026-06-11.** Original implementation pass landed in two phases —
+> execution-wrapper precursors (doc sweep, lint fix, Gate-0 oracle target, inspect-hang
+> fix) followed by the 8 workstreams (WS1, WS8, WS2, WS3, WS7, WS4 6a/6b/6c, WS5, WS6)
+> and the final-acceptance target. First post-mortem round (8 commits): api isolation
+> made enforceable via
 > import-linter contract on `root_packages += ["api"]`; missing `elasticsearch` core dep
 > restored; WS5 Spark coverage completed for `silver.conform` / `gold.build_fact_sales`
 > / `gold.build_fact_invoices`; `MAPPING` codegen'd from `FactSalesDoc` via
 > `es_mapping()`; unused `SalesSearchQuery` dropped; pyright `reportAttributeAccessIssue`
 > scoped per-site instead of globally; `os._exit` now flushes stdio first; pip-audit
 > uses `--all-packages` with a documented baseline-ignore pattern; `get_settings()`
-> consumers migrated). `CHANGELOG.md` `[Unreleased]` carries the full diff. Cold-rebuild
-> `make accept` passes "diff modulo timestamps/load-ids" (see "Validation & regression
-> safety"). P2 (WS9 Ports & adapters) remains queued.
+> consumers migrated. Second post-mortem round (3 commits): api wheel + Dockerfile
+> aligned to ship as the `api` package (no more analysis-vs-runtime split); stale
+> `api/main.py` cross-plane-contract docstring corrected; the last two Gold builders
+> (`build_daily_agg`, `build_billed_daily_agg`) got dedicated tests (Spark coverage 12
+> → 18); plus a doc-rot sweep across `CONTRIBUTING.md` / `AGENTS.md` /
+> `docs/{ARCHITECTURE,HANDOFF,BACKLOG}.md` / `README.md` / earlier `CHANGELOG.md`
+> entries that referenced since-removed symbols. `CHANGELOG.md` `[Unreleased]` carries
+> the full diff. Cold-rebuild `make accept` passes "diff modulo timestamps/load-ids"
+> (see "Validation & regression safety"). P2 (WS9 Ports & adapters) remains queued.
 > Decisions taken with the maintainer:
 > **(1)** phased — enforcement + typed boundaries now (P1), Protocol ports + adapters planned
 > (P2), full per-layer package split deferred (P3); **(2)** adopt absolute imports + `ruff`

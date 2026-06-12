@@ -3,10 +3,15 @@
 Single home for future work. Topical docs (`OBSERVABILITY.md`, `HANDOFF.md`) point here
 instead of carrying their own scattered lists. Ordered roughly by priority.
 
-> **Python code-hardening** has a dedicated sequenced plan in
-> [`PYTHON_HARDENING_PLAN.md`](PYTHON_HARDENING_PLAN.md) (contracts/boundaries, typing,
-> testing + coverage, uv-workspaces, supply-chain hardening). It expands this backlog's P2
-> testing/ADR/modularity themes into an executable order; deferred items from it land here.
+> **Python code-hardening** — the [`PYTHON_HARDENING_PLAN.md`](PYTHON_HARDENING_PLAN.md) P1
+> series is **complete (2026-06-11)**. It absorbed this backlog's P2 testing items (Spark
+> unit tests + `pytest-cov` are done — see CHANGELOG WS5/WS6) and added new infrastructure
+> not previously listed here: typed cross-plane Pydantic contracts, mypy-strict + pyright
+> as CI gates, `import-linter` with 4 architecture contracts (incl. serving-plane
+> isolation), uv workspaces, diff-coverage at 80%, supply-chain hardening (Dependabot,
+> `pip-audit`, `gitleaks`, SHA-pinned actions). The plan's P2 (WS9 ports & adapters) is
+> deferred; the trigger is a credible second backend (e.g. an Azure-AI-Search or ADLS
+> adapter).
 
 ## P1 — version upgrades (PAST EOL as of 2026-06-03)
 
@@ -30,13 +35,16 @@ Recommended order: ES first (smallest blast radius), Spark second, Airflow third
 
 ## P2 — productionization (from `docs/HANDOFF.md`)
 
-- **Structured logging** — replace 24 `print()` calls in 9 files (verified by audit) with the
-  `logging` module + JSON formatter + per-run correlation ID. Inspect-script prints (`verify.py`,
-  `inspect_lake.py`) should grow a `--json` flag so humans still get readable tables.
-- **Spark unit tests** — add `tests/test_transforms_spark.py` covering the 4 pure transform
-  functions (`build_fact_sales`, `build_fact_invoices`, `silver.conform`, `silver_cdc.collapse_changes`).
-  Gate with a `pyspark` pytest marker so CI can opt in. Brings coverage from 4/15 → 8/15 modules.
-- **`pytest-cov`** — add to the `dev` extra so `make test` reports coverage %.
+- **Structured logging** — ✅ done 2026-06-03. Replaced 24 `print()` calls with
+  `logging` + JSON formatter + per-run correlation_id; `verify.py`/`inspect_lake.py`
+  grew the `--json` flag.
+- **Spark unit tests** — ✅ done 2026-06-11 via hardening plan WS5. `tests/test_transforms_spark.py`
+  covers all 6 Gold/Silver pure transforms (`silver.conform`,
+  `silver_cdc.collapse_changes`, `gold.build_fact_sales`, `gold.build_fact_invoices`,
+  `gold.build_daily_agg`, `gold.build_billed_daily_agg`) behind the `pyspark` marker; opt-in
+  CI job sets up JDK 17. **18 tests** pass.
+- **`pytest-cov`** — ✅ done 2026-06-11 via hardening plan WS5/WS6. `pytest --cov` runs in
+  the default CI job; `diff-cover --fail-under=80` gates new/changed lines on PRs.
 - **ADRs** — formalize key decisions as immutable records under `docs/adr/` (MADR format).
   Decision rationale currently lives in `CHANGELOG.md` dated entries + `ARCHITECTURE.md`
   "Deliberate non-goals"; an ADR per decision would give one immutable file per choice.

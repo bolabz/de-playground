@@ -7,6 +7,33 @@ mark milestones rather than released versions.
 ## [Unreleased]
 
 ### Fixed
+- **Second post-mortem (2026-06-11):** three more callouts after the first round of
+  corrections, each addressed in one commit.
+  - **api wheel ships as `api/` package** — was a flat `main.py` at the wheel top-level
+    that the runtime never actually used (the Dockerfile copied main.py separately).
+    Hatchling `force-include` now ships `api/__init__.py` + `api/main.py` inside the
+    wheel; the Dockerfile CMD became `uvicorn api.main:app` (proper package import) so
+    the analysis target (import-linter, mypy, pyright) and the runtime artifact match.
+  - **`api/main.py` docstring fixed** — still listed the removed `SalesSearchQuery` in
+    the cross-plane-contract paragraph; now lists what's actually imported and notes the
+    `api may only import de_playground.contracts` contract that machine-enforces the
+    boundary.
+  - **Spark coverage finished out** — added 6 tests for `gold.build_daily_agg` (3) and
+    `gold.build_billed_daily_agg` (3): countDistinct dedup semantics, sum + F.round
+    revenue/profit, negative credit-note passthrough, orderBy. Total Spark coverage now
+    18 tests; all 6 Gold/Silver builder functions in the module are exercised.
+  - **Doc-rot sweep** — reconciled `CONTRIBUTING.md` ("Testing" + "Conventions" + CI
+    list), `AGENTS.md` (`settings` → `get_settings()`, contracts module, CI checks),
+    `docs/ARCHITECTURE.md` (project tree includes `contracts.py`/api/ as workspace
+    member, "Deliberate non-goals" test-coverage bullet reflects the 36+18 reality),
+    `docs/HANDOFF.md` (refresh date, snapshot table CI row + tests row + new
+    typed-contracts and architecture-enforcement rows, "How other teams handle this"
+    para), `docs/BACKLOG.md` (Spark unit tests + pytest-cov + structured logging marked
+    ✅ done; hardening-plan note rewritten to reflect P1 complete), `README.md` (FastAPI
+    "stub until Phase 3" line was years out of date; tightened `uv sync` notes), and
+    earlier `CHANGELOG.md` entries that referenced the since-removed `SalesSearchQuery`,
+    the reverted `__all__`, the old test counts, and `pip-audit --all-extras`.
+
 - **Post-mortem corrections (2026-06-11):** eight defects surfaced after the original
   `make accept` were resolved as follow-up commits. The series is now genuinely complete.
   - **api isolation is enforceable, not aspirational** — `api/__init__.py` makes the
@@ -17,10 +44,11 @@ mark milestones rather than released versions.
   - **`elasticsearch` is a core lib dep** — WS7 had moved it into the api/ workspace
     member, but `de_playground.load.to_elasticsearch` imports it; `uv sync --extra dev`
     failed test collection. Restored as a top-level dep alongside the api/ declaration.
-  - **WS5 Spark transform coverage finished** — `silver.conform`,
+  - **WS5 Spark transform coverage finished (first pass)** — `silver.conform`,
     `gold.build_fact_sales`, `gold.build_fact_invoices` are tested (9 new
-    pytest.mark.pyspark tests, opt-in CI job). 12 spark tests total cover the 4
-    revenue-bearing transforms the source plan called out.
+    pytest.mark.pyspark tests, opt-in CI job). 12 spark tests total at that point
+    covered the 4 named transforms; the second post-mortem above expanded to 6 builders
+    / 18 tests.
   - **ES MAPPING is codegen'd from `FactSalesDoc`** via the new
     `de_playground.contracts.es_mapping()`. Was a 16-entry hand-maintained dict
     duplicating the Pydantic model — residual Finding 9 — now derived from the model's
@@ -74,28 +102,30 @@ mark milestones rather than released versions.
   testing gap from BACKLOG / Finding 7 is filled. New files:
     - `tests/test_contracts.py` — `build_query` parametrize matrix (8 combos) + hypothesis
       property test ("any filter combination yields a structurally valid bool query");
-      Pydantic model round-trips + `extra="forbid"` enforcement; `SalesSearchQuery` limit
-      bounds.
+      Pydantic model round-trips + `extra="forbid"` enforcement; plus (post-mortem)
+      `es_mapping()` codegen tests covering Pydantic-field parity, type assignment,
+      `description` override, mutation safety, and rejection of unmapped Python types.
     - `tests/test_load.py` — `to_actions` row count preservation, ISO-string date
       coercion, `_id` keyed to `order_line_id`, extra-field rejection, plus a hypothesis
       property test that ids round-trip 1:1.
     - `tests/test_verify.py` — `_build_report` OK / APPEND / DIFF status logic, no-source
-      fallback, bucket-name passthrough (via mocked settings).
+      fallback, bucket-name passthrough (via monkeypatched `get_settings()`).
     - `tests/conftest.py` — session-scoped local-mode `spark` fixture (`local[2]`, no UI,
       2 shuffle partitions); uses `pytest.importorskip("pyspark")` so non-Spark jobs
       collect cleanly.
-    - `tests/test_transforms_spark.py` — first three Spark-marked tests for
-      `silver_cdc.collapse_changes` (latest-per-key, delete drops keys, change-meta
-      cols stripped). More transforms (fact_sales, fact_invoices, silver.conform) to
-      land as needed.
+    - `tests/test_transforms_spark.py` — Spark-marked tests for all 6 revenue-bearing
+      Gold/Silver transforms: `silver_cdc.collapse_changes`, `silver.conform`,
+      `gold.build_fact_sales`, `gold.build_fact_invoices`, `gold.build_daily_agg`, and
+      `gold.build_billed_daily_agg`. Started at 3 tests for `collapse_changes`; finished
+      out to **18 tests** in the post-mortem to close the named-four blind spot.
   `build_query` moved from `api/main.py` into `de_playground.contracts` so it's
   importable from `tests/` without an `api/` PYTHONPATH dance (api/main.py just
   re-imports it). `hypothesis>=6.0` + `pytest-cov>=5.0` added to the `dev` extra (cov is
   wired in WS6). `[tool.pytest.ini_options]` registers the `pyspark` marker and excludes
   it from the default run via `addopts = "-m 'not pyspark'"`. New opt-in `pyspark` CI
   job sets up JDK 17 (Temurin) and runs `pytest -m pyspark`. Default `quality` job stays
-  Java-free. Result: 35 fast tests pass + 3 deselected (Spark) by default; opt-in job
-  runs the 3 Spark tests in ~5s.
+  Java-free. Final state: **36 fast tests** + 18 deselected (Spark) by default; opt-in
+  job runs all 18 Spark tests in ~7s.
 
 - **WS4 6c / mypy --strict (scoped) + pyright standard as CI gates (2026-06-11):**
   pyproject.toml `[tool.mypy] strict = true` with scoped overrides for
@@ -128,15 +158,19 @@ mark milestones rather than released versions.
   - `extract/verify.py:79` `except Exception` narrowed to `(SQLAlchemyError, OSError)` —
     pyodbc/connection failures bubble as SQLAlchemyError subclasses (DBAPIError); OSError
     covers DNS / network unreachable. Source-vs-Bronze comparison stays best-effort.
-  - `src/de_playground/py.typed` (PEP 561 marker) + minimal `__all__` in
-    `src/de_playground/__init__.py` so downstream consumers get the typed surface.
+  - `src/de_playground/py.typed` (PEP 561 marker) so downstream consumers get the typed
+    surface. (Initially included a minimal `__all__` in `de_playground/__init__.py`; that
+    eagerly listed sub-packages was reverted in the WS4 6c follow-up because importing
+    `de_playground` doesn't need to drag in pyspark/dlt at import time — sub-packages stay
+    reachable via dot access without listing.)
 
 - **WS4 6a / typed cross-plane contracts (2026-06-11):** new
-  `src/de_playground/contracts.py` defines the shared Pydantic models — `FactSalesDoc`,
-  `SalesSearchQuery`, `SalesSearchResult` — plus the single canonical `INDEX_FACT_SALES`
-  string. Producer (`load.to_elasticsearch.to_actions`) and serving (`api.main`) both
-  import them, so Finding 9's duplicated implicit contract (the same `"fact_sales"`
-  string + document field set redeclared in two modules) is gone. `to_actions` now
+  `src/de_playground/contracts.py` defines the shared Pydantic models — `FactSalesDoc`
+  and `SalesSearchResult` — plus the single canonical `INDEX_FACT_SALES` string and
+  (added in the post-mortem) `build_query` and `es_mapping()`. Producer
+  (`load.to_elasticsearch.to_actions`) and serving (`api.main`) both import them, so
+  Finding 9's duplicated implicit contract (the same `"fact_sales"` string + document
+  field set redeclared in two modules) is gone. `to_actions` now
   `FactSalesDoc.model_validate(row)`s every Gold row before yielding the bulk action;
   bad rows fail loud rather than landing as broken documents (`indexed: 231412, errors:
   0` against the WWI sample). FastAPI endpoints use `response_model=SalesSearchResult`
@@ -145,9 +179,11 @@ mark milestones rather than released versions.
   de_playground dep" was relaxed for this one module — api/pyproject.toml adds
   `de-playground` as a `[tool.uv.sources] de-playground = { workspace = true }` dep, and
   the api Dockerfile build context broadened to the repo root (`build: { context: ..,
-  dockerfile: api/Dockerfile }`) so both packages can be installed. The serving plane
-  still imports nothing from the pipeline runtime — only the schema. Verified: `make
-  regression` empty; `/health` + 3 canonical queries byte-identical to Gate-0.
+  dockerfile: api/Dockerfile }`) so both packages can be installed. The post-mortem then
+  *enforced* that "only contracts is allowed" via a fourth import-linter contract scoped
+  to api. The serving plane imports nothing from the pipeline runtime — only the schema.
+  Verified: `make regression` empty; `/health` + 3 canonical queries byte-identical to
+  Gate-0.
 
 - **WS7 / uv workspaces; api/ promoted to its own pyproject (2026-06-11):** root
   `pyproject.toml` declares `[tool.uv.workspace] members = ["api"]`. New
@@ -157,24 +193,27 @@ mark milestones rather than released versions.
   Dockerfile that Finding 11 called out — `provides-extras` now `["process", "eda",
   "dev"]`). `api/Dockerfile` rebuilt: pulls `uv` from the official distroless image then
   `uv pip install --system --no-cache .` against the workspace member — no inline pinned
-  versions, single source of truth in `api/pyproject.toml`. `api/` declares **no**
-  dependency on `de_playground` (serving-plane isolation, same boundary import-linter
-  would enforce if api/ ever grew a package). `jobs/` stays in the core lib (it's a
-  ~40-line spark-submit driver whose only dep IS de_playground[process]). Verified: `make
-  regression` empty after `docker compose up -d --build api`; `/health` + 3 canonical
-  queries identical to baseline.
+  versions, single source of truth in `api/pyproject.toml`. WS4 6a then added one
+  shared-schema dep (`de-playground` workspace dep, contracts-only), and the post-mortem
+  made `api/` an importable package + added the `api may only import
+  de_playground.contracts` import-linter contract that machine-enforces the
+  serving-plane isolation (no longer just convention). The wheel ships as `api/`
+  end-to-end (hatchling force-include) and the Dockerfile CMD became `uvicorn
+  api.main:app` so the analysis target and runtime artifact stay aligned. `jobs/` stays
+  in the core lib (it's a ~40-line spark-submit driver whose only dep IS
+  de_playground[process]). Verified: `make regression` empty after `docker compose up -d
+  --build api`; `/health` + 3 canonical queries identical to baseline.
 
-- **WS3 / architecture enforced by import-linter (2026-06-11):** three contracts in
-  `pyproject.toml` `[tool.importlinter]` machine-check the layering the docs assert.
-  Layered architecture (`extract | transform | load` peers → `common` → `config`) with
-  `exhaustive = true` — every new sub-package must be placed in the layer graph or the
-  contract breaks, so drift is caught the moment it lands. Forbidden contracts:
-  `common` cannot import any of the peers; `config` cannot import anything else in
-  `de_playground`. New `import-linter>=2.0` in the `dev` extra; CI runs `uv run
-  lint-imports` between mypy and pytest; pre-commit gets the upstream hook (v2.5). Gate
-  proven to bite — a deliberately-injected `common.lake -> extract.tables` import is
-  rejected with line numbers; reverted cleanly. Existing codebase passes all 3 contracts
-  on day one (23 files, 40 dependencies analysed).
+- **WS3 / architecture enforced by import-linter (2026-06-11):** machine-checked
+  contracts in `pyproject.toml` `[tool.importlinter]` enforce the layering the docs
+  assert. Landed at WS3 as three contracts (layered, common-forbidden, config-forbidden);
+  WS4 6a added `contracts` next to `config` at the leaf level; the post-mortem added a
+  fourth — **`api may only import de_playground.contracts`** — by making `api/` an
+  importable package and putting it in `root_packages`. Final state: 4 contracts kept, 0
+  broken. Each gate proven to bite during landing — a deliberately-injected `common.lake
+  -> extract.tables` was rejected with line numbers; same for `api.main ->
+  de_playground.load`. CI runs `uv run lint-imports` between mypy and pytest; pre-commit
+  has the upstream `seddonym/import-linter` hook.
 
 ### Changed
 - **WS2 / absolute imports + expanded ruff set (2026-06-11):** converted all 50 `from
@@ -192,7 +231,9 @@ mark milestones rather than released versions.
 ### Added
 - **WS8 / supply-chain + CI hardening (2026-06-11):** Dependabot watching `pip` and
   `github-actions` ecosystems (weekly); a separate `security` CI job running `pip-audit
-  --strict` (known-CVE deps via the full `uv sync --all-extras` env), `gitleaks-action`
+  --strict --all-packages` (known-CVE deps via the full `uv sync --all-extras
+  --all-packages` env, incl. the api/ workspace member; `--all-packages` was added in the
+  post-mortem because the original `--all-extras` missed api's deps), `gitleaks-action`
   (secrets scan, with `.env.example`/`config.py` LOCAL-ONLY placeholders allowlisted in
   `.gitleaks.toml`), and `lychee-action` (markdown link check across all `**/*.md`); the
   same `gitleaks` hook added to pre-commit. Workflow itself hardened: top-level

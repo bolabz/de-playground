@@ -157,24 +157,26 @@ de-playground/
 ├── README.md  CONTRIBUTING.md  CHANGELOG.md  LICENSE
 ├── docs/  ARCHITECTURE.md  GLOSSARY.md  OBSERVABILITY.md  TROUBLESHOOTING.md  BACKLOG.md  HANDOFF.md
 ├── dags/wwi_pipeline.py    # Airflow DAG — THIN: orchestrate only, no business logic
-├── src/de_playground/      # importable package
-│   ├── config.py           # pydantic-settings; connection URLs; least-privilege creds
-│   ├── common/             # lake.py (S3 helpers), spark.py (SparkSession), retry.py
+├── src/de_playground/      # importable package (uv workspace root)
+│   ├── config.py           # get_settings() factory; connection URLs; least-privilege creds
+│   ├── contracts.py        # cross-plane Pydantic models + es_mapping codegen + build_query
+│   ├── common/             # lake.py (S3 helpers), spark.py (SparkSession), retry.py, logging.py
 │   ├── extract/            # SQL Server -> Bronze: tables, source, pipeline (watermark),
 │   │                       #   cdc (Change Data Capture), verify (counts)
 │   ├── transform/          # PySpark: silver, silver_cdc, gold, pipeline, inspect_lake
-│   └── load/               # to_elasticsearch.py (Gold -> ES)
+│   └── load/               # to_elasticsearch.py (Gold -> ES; uses contracts.FactSalesDoc)
 ├── jobs/transform_cluster.py   # spark-submit entry for the standalone cluster
-├── api/                    # FastAPI service — own Dockerfile (separate deployable)
+├── api/                    # FastAPI service — own pyproject.toml (uv workspace member),
+│                           #   own Dockerfile; imports ONLY de_playground.contracts
 ├── spark/Dockerfile        # Apache Spark + Delta/S3A jars baked in (cluster + submit image)
 ├── compose/                # modular compose: core / spark / serving / observability (via include:)
 ├── platform/               # Phase 5 deploy track: k3d-config, Helm chart (charts/api), OpenTofu
 │                           #   (tofu/), Argo CD app (argocd/), Airflow 3 image + chart values
 ├── kibana/saved_objects.sh # export/import dashboards as version-controlled NDJSON
 ├── sql/                    # restore, enable_cdc, create_app_login (+ .sh wrappers)
-├── tests/                  # DB-free unit tests (config, lake/retry, table specs)
+├── tests/                  # unit tests — 36 fast (DB/Java-free) + 18 Spark-marked (opt-in)
 ├── notebooks/              # pandas EDA — explicitly OUT of the pipeline path
-└── data/                   # local scratch + .bak backups, gitignored
+└── data/                   # local scratch + .bak backups + Gate-0 baselines, gitignored
 ```
 
 > Two change-capture paths land in Bronze: the **watermark** extract (`extract/pipeline.py`,
@@ -209,10 +211,14 @@ Decisions kept simple on purpose; the *concepts* still transfer to a production 
   Least *privilege* is shown; the identity *mechanism* is the Azure-only part.
 - **SeaweedFS identity scoping** (the non-admin `app` actions): broad Read/Write/List across
   buckets; could tighten to per-bucket actions if desired.
-- **Test coverage:** the Spark transform logic is verified ad hoc in local Spark, not in the
-  committed suite (which would require Java/Spark in CI). Unit tests cover the DB-free pieces;
-  the 4 pure transform functions are written to be testable when CI grows a `pyspark` marker
-  (tracked in `BACKLOG.md`).
+- **Test coverage:** the Java-free default `make test` runs 36 DB-free unit tests
+  (contracts incl. hypothesis properties, producer logic, verify report, lake helpers,
+  extract specs). The Spark transform logic is covered by 18 `pyspark`-marked tests
+  (silver.conform, silver_cdc.collapse_changes, gold.{build_fact_sales, build_fact_invoices,
+  build_daily_agg, build_billed_daily_agg}); they run in an opt-in CI job with JDK 17 and
+  locally via `JAVA_HOME=... uv run pytest -m pyspark`. The deliberate non-goal here is
+  *making the default CI job depend on Java/Spark* — that stays opt-in to keep the gate
+  fast for non-transform work.
 - **Scale:** single-machine Spark (local and the toy standalone cluster) teaches the mechanics
   but not real network-shuffle cost. The muscle memory transfers; the performance lesson needs
   real distributed hardware.

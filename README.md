@@ -120,7 +120,7 @@ A service is only reachable once the profile that owns it is up. If you ran only
 | Spark master UI | http://localhost:8080 | `up-process` | watch stages/shuffles |
 | Elasticsearch | http://localhost:9200 | `up-serve` | derived serving index |
 | Kibana | http://localhost:5601 | `up-serve` | dashboards |
-| FastAPI | http://localhost:8000/docs | `up-serve` | auto Swagger UI — **stub until Phase 3** (won't serve yet) |
+| FastAPI | http://localhost:8000/docs | `up-serve` + `make index` | auto Swagger UI; the API needs the `fact_sales` index populated to return data |
 
 Use `make ps` to see what's actually running right now.
 
@@ -142,7 +142,7 @@ Use `make ps` to see what's actually running right now.
 With `up-ingest` running and the databases restored:
 
 ```sh
-uv sync          # picks up the Phase 1 deps (dlt, sqlalchemy, boto3, ...)
+make sync-all    # all extras + workspace members (uv sync --all-extras --all-packages)
 make extract     # uv run python -m de_playground.extract
 ```
 
@@ -278,7 +278,7 @@ Bring up the serving plane, then index Gold into Elasticsearch:
 
 ```sh
 make up-serve    # Elasticsearch (:9200), Kibana (:5601), FastAPI (:8000) — give ES ~30s
-make sync-all    # ensures the elasticsearch client is present
+make sync-all    # if you haven't already (the producer needs elasticsearch + deltalake)
 make index       # bulk-loads gold/wwi/fact_sales into the `fact_sales` ES index
 ```
 

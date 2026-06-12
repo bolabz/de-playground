@@ -7,66 +7,81 @@ history lives in [`../CHANGELOG.md`](../CHANGELOG.md); design constraints by int
 **snapshot table** (where we stand vs. the modern stack) and the **industry context** at the
 bottom.
 
-> **Refreshed 2026-06-09.** Snapshot reflects current state. The Phase 5 platform track
-> (k3d + OpenTofu + Helm + Argo CD + registry CD) and the Airflow 2→3 upgrade landed since the
-> last refresh. Remaining past-EOL pins: **Spark 3.5** and **ES 8.14** — see
-> [BACKLOG P1](BACKLOG.md#p1--version-upgrades-past-eol-as-of-2026-06-03) for the upgrade plan.
+> **Refreshed 2026-06-11.** Snapshot reflects current state. The full
+> [`docs/PYTHON_HARDENING_PLAN.md`](PYTHON_HARDENING_PLAN.md) P1 series landed (typed
+> contracts at every boundary, `mypy --strict` + `pyright` standard, `import-linter` layer
+> + serving-isolation contracts, uv workspaces, Pydantic-validated producer, diff-coverage
+> gate, supply-chain hardening, 54 tests across Java-free + opt-in `pyspark` jobs); the
+> Phase 5 platform track (k3d + OpenTofu + Helm + Argo CD + registry CD) and the Airflow
+> 2→3 upgrade landed before that. Remaining past-EOL pins: **Spark 3.5** and **ES 8.14** —
+> see [BACKLOG P1](BACKLOG.md#p1--version-upgrades-past-eol-as-of-2026-06-03) for the
+> upgrade plan.
 
 ## TL;DR
 
 This rig is **exemplary as a learning/reference PoC** and follows modern Python + data-eng
-hygiene well. *Local* IaC + Kubernetes + GitOps + registry-based CD now exist (Phase 5). The
-remaining productionization gaps are tracked in
-[BACKLOG P2](BACKLOG.md#p2--productionization-from-docshandoffmd): a **managed cloud** target
-(5d), data quality / contracts, lineage, secrets vault. The remaining firefighting is the EOL
-version upgrades ([BACKLOG P1](BACKLOG.md#p1--version-upgrades-past-eol-as-of-2026-06-03)) —
-now just **Spark 4** and **ES 8.19+** (Airflow 3 done). These are exactly the "~20% that doesn't
+hygiene well. *Local* IaC + Kubernetes + GitOps + registry-based CD now exist (Phase 5);
+the Python-hardening series (typed contracts, strict type checking, machine-checked
+architecture contracts, real test coverage on the revenue-bearing transforms) closed the
+biggest engineering-hygiene gaps. The remaining productionization gaps are tracked in
+[BACKLOG P2](BACKLOG.md#p2--productionization-from-docshandoffmd): a **managed cloud**
+target (5d), data quality / contracts, lineage, secrets vault. The remaining firefighting
+is the EOL version upgrades
+([BACKLOG P1](BACKLOG.md#p1--version-upgrades-past-eol-as-of-2026-06-03)) — now just
+**Spark 4** and **ES 8.19+** (Airflow 3 done). These are exactly the "~20% that doesn't
 transfer" the architecture doc called out — none are surprises.
 
 ## Where we're exemplary vs. where we deviate
 
 | Area | Status | Notes |
 |---|---|---|
-| Python project shape | ✅ exemplary | src layout, `pyproject.toml` as single source, `uv` + committed `uv.lock`, `ruff` + `mypy`, type hints everywhere, thin runners + pure functions |
+| Python project shape | ✅ exemplary | src layout + uv workspaces (`api/` is a member), `pyproject.toml` as single source, `uv.lock` committed, full ruff/mypy-strict/pyright/import-linter pipeline, typed cross-plane contracts (`de_playground.contracts`), thin runners + pure functions |
 | Data-eng patterns | ✅ exemplary | medallion, idempotency, high-watermark + CDC, ACID Delta, denormalized serving, thin DAG |
-| Security (local) | ✅ good | least-privilege SQL login + non-admin S3 identity, `.env` gitignored |
+| Typed contract boundaries | ✅ done | Pydantic `FactSalesDoc` + `SalesSearchResult` shared between producer + serving; ES `MAPPING` codegen'd from the model (`es_mapping()`); `to_actions` validates every row before yielding (231,412 / 231,412 valid on WWI) |
+| Architecture enforcement | ✅ done | `import-linter` with 4 contracts: layered (config/contracts < common < extract\|transform\|load), `common` forbidden from peers, `config`/`contracts` forbidden from everything else in de_playground, and **`api` may import only `de_playground.contracts`** |
+| Security (local) | ✅ good | least-privilege SQL login + non-admin S3 identity, `.env` gitignored, `gitleaks` pre-commit + CI, `pip-audit --strict --all-packages` in CI |
 | Observability | ✅ good | OpenTelemetry + Prometheus/Grafana/Alertmanager + ELK logs (Tier 2) |
-| Docs | ✅ strong | ARCHITECTURE / GLOSSARY / CONTRIBUTING / OBSERVABILITY / TROUBLESHOOTING (stable) + BACKLOG / HANDOFF / CHANGELOG (dated) |
+| Docs | ✅ strong | ARCHITECTURE / GLOSSARY / CONTRIBUTING / OBSERVABILITY / TROUBLESHOOTING (stable) + BACKLOG / HANDOFF / CHANGELOG / PYTHON_HARDENING_PLAN (dated) |
 | Structured logging | ✅ done | `src/de_playground/common/logging.py` — JSON + pretty + correlation_id (landed 2026-06-03) |
-| CI/CD | ✅ done | `.github/workflows/ci.yml` gates `ruff check` + `ruff format --check` + `mypy src` + `pytest` on every push/PR |
-| Pre-commit | ✅ done | `.pre-commit-config.yaml` with ruff + standard hooks; install via `uv run pre-commit install` |
+| CI/CD | ✅ done | `.github/workflows/ci.yml`: quality job gates `ruff check` (incl. flake8-bandit) + `ruff format --check` + `mypy --strict src` + `pyright src api` + `lint-imports` + `pytest --cov` + `diff-cover --fail-under=80` on PR; security job runs `pip-audit --strict --all-packages` + `gitleaks-action` + `lychee-action`; opt-in `pyspark` job sets up JDK 17 and runs Spark-marked transform tests. All actions SHA-pinned; least-privilege `permissions: contents: read` |
+| Pre-commit | ✅ done | `.pre-commit-config.yaml`: ruff (autofix) + ruff-format + gitleaks + import-linter + standard hooks; install via `uv run pre-commit install` |
+| Automated tests in CI | ✅ done | 36 Java-free tests (contracts incl. hypothesis properties, producer, verify report, lake, retry, extract specs) gate every PR; 18 `pyspark`-marked tests cover all 6 Gold/Silver pure transforms in the opt-in JDK 17 job |
 | LICENSE | ✅ done | MIT license at repo root |
 | CHANGELOG | ✅ done | `CHANGELOG.md` (Keep a Changelog format) with dated decision entries |
 | Dev Container | ✅ done | `.devcontainer/devcontainer.json` (MCR Python 3.11 + Java 17 + docker-outside-of-docker) |
 | Troubleshooting runbook | ✅ done | `docs/TROUBLESHOOTING.md` (symptom → cause → fix) |
 | Compose modularity | ✅ done | root `docker-compose.yml` uses `include:` for `compose/{core,spark,serving,observability}.yml` |
 | Local IaC + K8s + GitOps + CD | ✅ done (local) | Phase 5: k3d cluster, OpenTofu, Helm (API chart), Argo CD pull-based deploys, k3d registry + `make api-release`/`airflow3-release`; Airflow 3 on KubernetesExecutor |
-| **Automated tests in CI** | ⚠️ gap | transform logic verified ad hoc in Spark, not in the suite (4/15 modules covered) |
-| **Data quality / contracts** | ❌ missing | no Great Expectations/Soda gate, no freshness SLA |
+| **Data quality / contracts** | ❌ missing | no Great Expectations/Soda gate, no freshness SLA. Pydantic at the ES boundary catches doc-shape drift but not row-level data assertions |
 | **Managed cloud target** | ❌ missing | local IaC/K8s done; no AKS/Fabric/Databricks + ADLS yet (5d). docker-compose ≠ production |
 | **Secrets** | ⚠️ by design | static `.env`, not a vault (the Azure-only lesson) |
 | **Lineage** | ❌ missing | no OpenLineage/Marquez |
-| **ADRs** | ⚠️ proto | decision rationale lives in `CHANGELOG.md` + `ARCHITECTURE.md` non-goals; no `docs/adr/` yet |
+| **ADRs** | ⚠️ proto | decision rationale lives in `CHANGELOG.md` + `ARCHITECTURE.md` non-goals + `PYTHON_HARDENING_PLAN.md` "Decisions log"; no `docs/adr/` yet |
 | **Versions** | 🔥 PAST EOL | Spark 3.5 + ES 8.14 still past EOL (Airflow 3.1.7 done via Phase 5b) — upgrade is urgent |
 
 ## Remaining work
 
 - **Urgent firefighting:** [BACKLOG P1](BACKLOG.md#p1--version-upgrades-past-eol-as-of-2026-06-03) — Spark 4 and ES 8.19+ upgrades (both past EOL). Airflow 3 is done (Phase 5b).
-- **Productionization queue:** [BACKLOG P2](BACKLOG.md#p2--productionization-from-docshandoffmd) — managed cloud target (5d), data contracts, lineage, secrets vault, ADRs, Spark unit tests, compose healthchecks, `make check-env`. (Local IaC/K8s/GitOps/CD landed in Phase 5.)
+- **Productionization queue:** [BACKLOG P2](BACKLOG.md#p2--productionization-from-docshandoffmd) — managed cloud target (5d), data contracts (row-level data quality, not just schema), lineage, secrets vault, ADRs, compose healthchecks, `make check-env`. (Local IaC/K8s/GitOps/CD landed in Phase 5; Spark unit tests + pytest-cov landed via WS5/WS6 of the hardening plan.)
 - **Observability tier-3:** [BACKLOG P3](BACKLOG.md#p3--observability-follow-ups-from-docsobservabilitymd) — traces backend, dlt run-trace persistence, Airflow OTel.
+- **Hardening plan P2 (deferred):** `de_playground.ports` + `de_playground.adapters/*` for ObjectStore / SearchIndex / SourceReader. P1 complete; P2 (WS9 ports & adapters / DI) sequenced after the cloud-target work.
 
 ## How other teams handle this (real-world)
 
-The mainstream OSS-friendly shape in 2026: **uv + ruff + mypy/ty** for Python; **pre-commit +
-GitHub Actions** gating lint/type/test; **Dev Containers / Codespaces** for environment parity;
-**ADRs + Keep-a-Changelog** for decisions/history; **OpenTelemetry → Prometheus/Grafana/Loki**
-for ops observability and **Great Expectations/Soda + OpenLineage** for *data* observability;
-**Terraform/OpenTofu** for IaC + **Argo/Flux** for GitOps; and a managed orchestrator + lakehouse
-(Airflow 3 / Astronomer, or ADF + Fabric/Databricks) rather than self-hosted compose. We now match
-most of that list (uv/ruff/mypy, pre-commit, GH Actions, Dev Container, Keep-a-Changelog,
-OTel→Prom/Grafana/ELK, structured logging, **Airflow 3**, and **OpenTofu + Helm + Argo CD + a
-registry** locally); the remaining gaps are **ADRs, data contracts, lineage (OpenLineage), and a
-managed *cloud* target** (the local platform track stands in for it today).
+The mainstream OSS-friendly shape in 2026: **uv + ruff + mypy/pyright + import-linter** for
+Python; **Pydantic at the contract boundaries** for typed data shapes; **pre-commit + GitHub
+Actions** gating lint/type/arch/test/coverage/supply-chain; **Dev Containers / Codespaces**
+for environment parity; **ADRs + Keep-a-Changelog** for decisions/history; **OpenTelemetry
+→ Prometheus/Grafana/Loki** for ops observability and **Great Expectations/Soda +
+OpenLineage** for *data* observability; **Terraform/OpenTofu** for IaC + **Argo/Flux** for
+GitOps; and a managed orchestrator + lakehouse (Airflow 3 / Astronomer, or ADF +
+Fabric/Databricks) rather than self-hosted compose. We now match most of that list
+(uv/ruff/`mypy --strict`/pyright/import-linter, Pydantic at the ES boundary, pre-commit,
+GH Actions with `pip-audit`/`gitleaks`/`lychee`/`diff-cover`, Dev Container,
+Keep-a-Changelog, OTel→Prom/Grafana/ELK, structured logging, **Airflow 3**, and **OpenTofu
++ Helm + Argo CD + a registry** locally); the remaining gaps are **ADRs, row-level data
+contracts (GX/Soda), lineage (OpenLineage), and a managed *cloud* target** (the local
+platform track stands in for it today).
 
 ## Sources
 

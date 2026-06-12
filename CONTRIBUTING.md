@@ -8,8 +8,13 @@ See `README.md` for how to run everything and `docs/ARCHITECTURE.md` for the des
 work is tracked in `docs/BACKLOG.md`; **when something fails, go to `docs/TROUBLESHOOTING.md`
 first** — that's the canonical symptom→cause→fix runbook (env races, JDK / Apple-Silicon /
 compose-path / readiness gotchas all live there). Monitoring is in `docs/OBSERVABILITY.md`.
-CI (ruff + mypy + pytest) runs on every PR; install the matching pre-commit hooks with
-`uv run pre-commit install`.
+CI runs the full hardening pipeline on every push/PR — `ruff check` (expanded set incl.
+flake8-bandit) + `ruff format --check` + `mypy --strict src` + `pyright src api` +
+`lint-imports` (architecture) + `pytest --cov` + `diff-cover` (≥80% of changed lines), with
+a separate `security` job for `pip-audit --strict --all-packages` + `gitleaks` + `lychee`
+markdown link check, plus an opt-in `pyspark` job that installs JDK 17 and runs the
+Spark-marked transform tests. Install matching pre-commit hooks with
+`uv run pre-commit install` (gitleaks + import-linter + ruff + the standard hooks).
 
 ## Setup recap
 
@@ -31,8 +36,10 @@ cp .env.example .env                         # local-only placeholders; .env is 
   (layered architecture). Run `make lint` for ruff; CI runs the rest. Every module uses
   `from __future__ import annotations` and type hints; relative imports are banned (TID252).
 - **Config, not constants:** all connection info, credentials, bucket names, and endpoints
-  come from `de_playground.config.settings` (pydantic-settings, read from `.env`). Don't
-  hardcode hosts/keys/paths in modules.
+  come from `de_playground.config.get_settings()` (pydantic-settings, read from `.env`).
+  Call it at-use (`settings = get_settings()` at the top of the function); tests can swap
+  via `monkeypatch("...get_settings", return_value=fake)` or `get_settings.cache_clear()`.
+  Don't hardcode hosts/keys/paths in modules.
 - **Thin runners, pure logic:** transform/business logic lives in small *pure* functions
   (e.g. `gold.build_fact_sales`, `silver.conform`, `silver_cdc.collapse_changes`) that take
   and return DataFrames — easy to test. The `pipeline.py`/`run()` modules and the Airflow DAG
@@ -63,13 +70,23 @@ use `ValidFrom` as the cursor instead of `LastEditedWhen`.
 
 ## Testing
 
-`make test` runs DB-free unit tests (`tests/`) covering config, the lake/retry helpers, and
-table specs — fast, no Docker/Java needed. The Spark transform logic (silver dedupe, gold
-measures, CDC collapse, fact_invoices) is currently verified *ad hoc* against synthetic data
-in local Spark, not in the committed suite (it needs Java/Spark). This is a known gap —
-tracked in `docs/BACKLOG.md` (P2 "Spark unit tests"); see `docs/ARCHITECTURE.md` ("Deliberate
-non-goals") for the rationale. When adding transform logic, verify it the same way and note
-it in the PR.
+`make test` runs the DB-free + Java-free unit tests (`tests/`) — **36 tests** covering
+typed contracts (`build_query`, `FactSalesDoc`, `SalesSearchResult`, `es_mapping` codegen)
+including hypothesis property tests; producer logic (`to_actions`); the verify report
+(`_build_report` OK/APPEND/DIFF + mocked-`get_settings` swap); lake helpers (`s3a`,
+`retry_until`); and the extract specs (`WWI_TABLES`, `settings.mssql_url`). Fast, no
+Docker/Java needed.
+
+The Spark transform logic (silver dedupe, silver_cdc collapse, gold fact_sales /
+fact_invoices / daily-agg / billed-daily-agg) is covered by **18 tests** in
+`tests/test_transforms_spark.py`, behind a `pyspark` pytest marker. They run on the opt-in
+CI job (with JDK 17) and locally via `JAVA_HOME=$(java_home -v 17) uv run pytest -m
+pyspark`; the default `make test` deselects them so they never block a Java-free run.
+
+The `pyspark`-marked tests import the transform modules at the top — guarded by
+`pytest.importorskip("pyspark")` so a default `uv sync --extra dev` collection still
+passes. New Spark transforms get a matching test in `tests/test_transforms_spark.py`;
+non-Spark pure functions get one in the relevant `tests/test_*.py`.
 
 ## uv extras (avoid the churn)
 
