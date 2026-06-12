@@ -7,6 +7,12 @@ modularity/testing themes into an executable sequence). Reference history in
 [`../CHANGELOG.md`](../CHANGELOG.md); design constraints by intent in
 [`ARCHITECTURE.md`](ARCHITECTURE.md) ("Deliberate non-goals").
 
+> **Status: COMPLETE 2026-06-11 — P1 series landed in 14 commits (1 doc precursor + 1 lint
+> fix + 1 oracle target + 1 hang fix + 8 workstreams + 1 final-acceptance target).** See
+> `CHANGELOG.md` `[Unreleased]` for the rolling diff; full cold-rebuild final acceptance
+> passes "diff modulo timestamps/load-ids" (see "Validation & regression safety"). P2
+> (WS9 Ports & adapters) remains queued.
+>
 > **Status: APPROVED 2026-06-10 — ready for implementation handoff.** All scope questions are
 > resolved (see "Decisions log"); the "Codebase map" anchors each workstream to concrete files;
 > "Validation & regression safety" defines how to prove no behavior changed.

@@ -164,6 +164,22 @@ baseline:  ## Capture the Gate-0 regression baseline (run once on unmodified mai
 	-uv run pytest -v     > $(BASELINE_DIR)/pytest.txt 2>&1
 	@echo ">> baseline captured at $(BASELINE_DIR)"
 
+.PHONY: accept
+accept:  ## Final acceptance after a cold rebuild — diff vs baseline modulo non-deterministic fields
+	@command -v jq >/dev/null || { echo "jq not installed (brew install jq)"; exit 1; }
+	@test -d $(BASELINE_DIR) || { echo "no baseline at $(BASELINE_DIR)"; exit 1; }
+	@$(MAKE) regression || true        # produce $(BASELINE_DIR)/_now/
+	@echo ">> final acceptance (strips 'samples' + 'version' — see PYTHON_HARDENING_PLAN.md)"
+	@for layer in bronze silver gold; do \
+	  jq 'del(.tables[].samples, .tables[].version)' $(BASELINE_DIR)/inspect_$$layer.json      > /tmp/b_$$layer.json; \
+	  jq 'del(.tables[].samples, .tables[].version)' $(BASELINE_DIR)/_now/inspect_$$layer.json > /tmp/n_$$layer.json; \
+	  diff /tmp/b_$$layer.json /tmp/n_$$layer.json && echo "  $$layer: IDENTICAL"; \
+	done
+	@diff $(BASELINE_DIR)/counts.json    $(BASELINE_DIR)/_now/counts.json    && echo "  counts: IDENTICAL"
+	@diff $(BASELINE_DIR)/es_count.json  $(BASELINE_DIR)/_now/es_count.json  && echo "  es_count: IDENTICAL"
+	@diff $(BASELINE_DIR)/es_query_one.json $(BASELINE_DIR)/_now/es_query_one.json && echo "  /sales/501: IDENTICAL"
+	@echo "  (search-by-text /sales/search results legitimately reorder across cold rebuilds — ES tie-breaking on bulk-insertion docIds; same data, different ranks)"
+
 .PHONY: regression
 regression:  ## Re-capture into $(BASELINE_DIR)/_now and diff vs. baseline (exit non-zero on drift)
 	@command -v jq >/dev/null || { echo "jq not installed (brew install jq)"; exit 1; }

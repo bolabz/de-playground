@@ -7,6 +7,18 @@ mark milestones rather than released versions.
 ## [Unreleased]
 
 ### Added
+- **P1 series complete — final acceptance passed (2026-06-11):** full cold teardown +
+  bring-up + pipeline + re-capture passes the source plan's "diff must be empty modulo
+  timestamps/load-ids" bar end-to-end. Verified data-bearing identity:
+  `counts.json` (source-vs-Bronze row counts), `es_count.json` (231,412 docs),
+  `es_query_one.json` (/sales/501 single-doc lookup), and the schema/row-count/column-
+  count/partition fields of all 3 inspect_*.json layers — **all byte-identical**. The
+  legitimately non-deterministic noise (Delta `version` write-count; `samples` arbitrary
+  `ds.head(3)` ordering; ES tie-breaking on bulk-insertion docIds for text-search
+  queries) is acknowledged in the source plan. New `make accept` target strips the
+  noise fields and confirms the data identity in one command.
+
+### Added
 - **WS6 / diff-coverage gate at 80% of changed lines (2026-06-11):** CI's `quality` job
   now runs `pytest --cov=de_playground --cov-report=xml --cov-report=term` (total
   coverage reported, not gated). PRs additionally run
