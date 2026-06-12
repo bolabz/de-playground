@@ -15,7 +15,7 @@ from pyspark.sql import functions as F
 
 from de_playground.common.lake import ensure_bucket, s3a
 from de_playground.common.logging import get_logger
-from de_playground.config import settings
+from de_playground.config import get_settings
 
 log = get_logger(__name__)
 
@@ -57,6 +57,7 @@ def conform(df: DataFrame, primary_key: str, cursor: str) -> DataFrame:
 
 
 def build_silver(spark: SparkSession) -> None:
+    settings = get_settings()
     ensure_bucket(settings.silver_bucket)
     for spec in SILVER_TABLES:
         src = s3a(settings.bronze_bucket, "wwi", spec.table)

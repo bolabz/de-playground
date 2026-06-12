@@ -20,7 +20,7 @@ from pyspark.sql import functions as F
 
 from de_playground.common.lake import ensure_bucket, s3a
 from de_playground.common.logging import get_logger
-from de_playground.config import settings
+from de_playground.config import get_settings
 
 log = get_logger(__name__)
 
@@ -111,6 +111,7 @@ def build_billed_daily_agg(fact: DataFrame) -> DataFrame:
 
 
 def build_gold(spark: SparkSession) -> None:
+    settings = get_settings()
     ensure_bucket(settings.gold_bucket)
 
     # ---- ORDERED: fact_sales + daily agg ----

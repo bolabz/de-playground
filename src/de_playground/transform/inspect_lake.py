@@ -17,7 +17,7 @@ import pyarrow.dataset as pads
 from deltalake import DeltaTable
 
 from de_playground.common.lake import delta_storage_options, pyarrow_s3
-from de_playground.config import settings
+from de_playground.config import get_settings
 
 # layer -> (format, settings bucket attr, tables)
 _LAYERS: dict[str, tuple[str, str, list[str]]] = {
@@ -69,7 +69,7 @@ def _inspect_delta(bucket: str, name: str) -> dict[str, object]:
 
 def collect(layer: str) -> dict[str, object]:
     fmt, bucket_attr, tables = _LAYERS[layer]
-    bucket = getattr(settings, bucket_attr)
+    bucket = getattr(get_settings(), bucket_attr)
     results = [
         _inspect_parquet(bucket, name) if fmt == "parquet" else _inspect_delta(bucket, name)
         for name in tables

@@ -6,6 +6,43 @@ mark milestones rather than released versions.
 
 ## [Unreleased]
 
+### Fixed
+- **Post-mortem corrections (2026-06-11):** eight defects surfaced after the original
+  `make accept` were resolved as follow-up commits. The series is now genuinely complete.
+  - **api isolation is enforceable, not aspirational** — `api/__init__.py` makes the
+    serving deployable an importable package; `[tool.importlinter] root_packages +=
+    "api"`; new forbidden contract `source_modules = ["api"]` exempts only
+    `de_playground.contracts`. Gate proven to bite (`api.main -> de_playground.load`
+    rejected with file:line).
+  - **`elasticsearch` is a core lib dep** — WS7 had moved it into the api/ workspace
+    member, but `de_playground.load.to_elasticsearch` imports it; `uv sync --extra dev`
+    failed test collection. Restored as a top-level dep alongside the api/ declaration.
+  - **WS5 Spark transform coverage finished** — `silver.conform`,
+    `gold.build_fact_sales`, `gold.build_fact_invoices` are tested (9 new
+    pytest.mark.pyspark tests, opt-in CI job). 12 spark tests total cover the 4
+    revenue-bearing transforms the source plan called out.
+  - **ES MAPPING is codegen'd from `FactSalesDoc`** via the new
+    `de_playground.contracts.es_mapping()`. Was a 16-entry hand-maintained dict
+    duplicating the Pydantic model — residual Finding 9 — now derived from the model's
+    annotations with a small overrides table for `description` (text+keyword).
+  - **`FactSalesDoc.picked_quantity` is required** (no `= 0` default) — every WWI line
+    carries it; a default would silently paper over upstream drift.
+  - **Unused `SalesSearchQuery` removed** — defined but never referenced by api/main.py.
+  - **`os._exit` flushes stdio first** — defensive against a future buffered write
+    between `main()` returning and the OS exit.
+  - **`pyright reportAttributeAccessIssue` scoped per-site** — moved from a global
+    `"warning"` downgrade to an inline ignore at the one PySpark-stub false positive
+    (`common/spark.py:33`). Real attribute errors elsewhere now stay errors.
+  - **`pip-audit --all-packages`** so the api/ workspace member's deps are audited too;
+    transitively bumped `aiohttp` to 3.14.1 to clear CVE-2026-34993 + CVE-2026-47265;
+    inline ignore-vuln pattern documented for future EOL-dep advisories.
+  - **`get_settings()` consumers migrated** — all 9 in-tree modules now call
+    `get_settings()` at-use, not at-import; the testability win is real (a
+    `monkeypatch("...get_settings", return_value=fake)` swap now actually swaps).
+    Eager module alias removed from `config.py`; PEP 562 `__getattr__` preserves
+    `from de_playground.config import settings` for ad-hoc scripts at the cost of one
+    lazy lookup.
+
 ### Added
 - **P1 series complete — final acceptance passed (2026-06-11):** full cold teardown +
   bring-up + pipeline + re-capture passes the source plan's "diff must be empty modulo

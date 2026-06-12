@@ -66,13 +66,20 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Cached factory — same semantics as the module-level singleton, but tests can
-    override via dependency injection or `get_settings.cache_clear()`. Nothing runs at
-    import time. WS4 (DI seam) — full constructor injection is P2 (WS9)."""
+    """Cached factory — same semantics as the previous module-level singleton, but
+    tests can override via `get_settings.cache_clear()` (then monkeypatch the env or
+    `Settings`). Nothing runs at import time; the first call materializes the instance.
+    WS4 (DI seam) — full constructor injection is P2 (WS9)."""
     return Settings()
 
 
-# Backward-compat alias. Existing consumers do `from de_playground.config import settings`
-# and read `settings.s3_endpoint_url` etc.; that still works. New code should call
-# `get_settings()` explicitly so tests can swap.
-settings = get_settings()
+def __getattr__(name: str) -> Settings:
+    """Module-level `__getattr__` (PEP 562) preserves `from de_playground.config import
+    settings` for ad-hoc consumers (scripts, REPL) that haven't migrated to the factory.
+    The first lookup triggers `get_settings()` lazily — so even this fallback doesn't
+    run at import time. In-tree consumers all call `get_settings()` explicitly so they
+    pick up test overrides.
+    """
+    if name == "settings":
+        return get_settings()
+    raise AttributeError(f"module 'de_playground.config' has no attribute {name!r}")

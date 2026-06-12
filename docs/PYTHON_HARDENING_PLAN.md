@@ -7,15 +7,19 @@ modularity/testing themes into an executable sequence). Reference history in
 [`../CHANGELOG.md`](../CHANGELOG.md); design constraints by intent in
 [`ARCHITECTURE.md`](ARCHITECTURE.md) ("Deliberate non-goals").
 
-> **Status: COMPLETE 2026-06-11 — P1 series landed in 14 commits (1 doc precursor + 1 lint
-> fix + 1 oracle target + 1 hang fix + 8 workstreams + 1 final-acceptance target).** See
-> `CHANGELOG.md` `[Unreleased]` for the rolling diff; full cold-rebuild final acceptance
-> passes "diff modulo timestamps/load-ids" (see "Validation & regression safety"). P2
-> (WS9 Ports & adapters) remains queued.
->
-> **Status: APPROVED 2026-06-10 — ready for implementation handoff.** All scope questions are
-> resolved (see "Decisions log"); the "Codebase map" anchors each workstream to concrete files;
-> "Validation & regression safety" defines how to prove no behavior changed.
+> **Status: COMPLETE — P1 series + post-mortem corrections landed 2026-06-11 across 22
+> commits on top of 9783126.** Original implementation pass: 15 commits (1 doc precursor
+> + 1 lint fix + 1 oracle target + 1 hang fix + 8 workstreams + 1 final-acceptance
+> target). Post-mortem corrections: 7 commits (api isolation made enforceable via
+> import-linter contract on `root_packages += ["api"]`; missing `elasticsearch` core dep
+> restored; WS5 Spark coverage completed for `silver.conform` / `gold.build_fact_sales`
+> / `gold.build_fact_invoices`; `MAPPING` codegen'd from `FactSalesDoc` via
+> `es_mapping()`; unused `SalesSearchQuery` dropped; pyright `reportAttributeAccessIssue`
+> scoped per-site instead of globally; `os._exit` now flushes stdio first; pip-audit
+> uses `--all-packages` with a documented baseline-ignore pattern; `get_settings()`
+> consumers migrated). `CHANGELOG.md` `[Unreleased]` carries the full diff. Cold-rebuild
+> `make accept` passes "diff modulo timestamps/load-ids" (see "Validation & regression
+> safety"). P2 (WS9 Ports & adapters) remains queued.
 > Decisions taken with the maintainer:
 > **(1)** phased — enforcement + typed boundaries now (P1), Protocol ports + adapters planned
 > (P2), full per-layer package split deferred (P3); **(2)** adopt absolute imports + `ruff`

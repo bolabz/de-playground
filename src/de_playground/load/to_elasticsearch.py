@@ -19,7 +19,7 @@ from elasticsearch.helpers import bulk
 from de_playground.common.lake import delta_storage_options
 from de_playground.common.logging import get_logger, set_correlation_id
 from de_playground.common.retry import retry_until
-from de_playground.config import settings
+from de_playground.config import get_settings
 from de_playground.contracts import INDEX_FACT_SALES, FactSalesDoc, es_mapping
 
 log = get_logger(__name__)
@@ -41,7 +41,7 @@ def wait_for_es(es: Elasticsearch) -> None:
 
 def read_fact_sales() -> list[dict]:
     dt = DeltaTable(
-        f"s3://{settings.gold_bucket}/wwi/fact_sales",
+        f"s3://{get_settings().gold_bucket}/wwi/fact_sales",
         storage_options=delta_storage_options(),
     )
     return dt.to_pyarrow_table().to_pylist()
@@ -66,7 +66,7 @@ def to_actions(rows: list[dict]) -> Iterator[dict]:
 
 def run() -> None:
     set_correlation_id()
-    es = Elasticsearch(settings.es_url)
+    es = Elasticsearch(get_settings().es_url)
     wait_for_es(es)
 
     if es.indices.exists(index=INDEX):

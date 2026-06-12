@@ -28,7 +28,7 @@ from sqlalchemy import create_engine, text
 
 from de_playground.common.lake import ensure_bucket
 from de_playground.common.logging import get_logger, set_correlation_id
-from de_playground.config import settings
+from de_playground.config import get_settings
 from de_playground.extract.tables import WWI_TABLES, TableSpec
 
 log = get_logger(__name__)
@@ -88,6 +88,7 @@ def _cdc_resource(spec: TableSpec, engine) -> DltResource:
 
 
 def build_pipeline() -> dlt.Pipeline:
+    settings = get_settings()
     return dlt.pipeline(
         pipeline_name=PIPELINE_NAME,
         destination=dlt.destinations.filesystem(
@@ -106,6 +107,7 @@ def build_pipeline() -> dlt.Pipeline:
 
 def run() -> None:
     set_correlation_id()
+    settings = get_settings()
     ensure_bucket(settings.bronze_bucket)
     engine = create_engine(settings.mssql_url)
     resources = [_cdc_resource(spec, engine) for spec in WWI_TABLES]

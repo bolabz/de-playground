@@ -14,7 +14,7 @@ from botocore.exceptions import ClientError, EndpointConnectionError
 
 from de_playground.common.logging import get_logger
 from de_playground.common.retry import retry_until
-from de_playground.config import settings
+from de_playground.config import get_settings
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
@@ -35,6 +35,7 @@ def s3_client(admin: bool = False) -> S3Client:
     Return type is `mypy_boto3_s3.S3Client` (provided by the `boto3-stubs` dep, WS1) so
     callers get full method/parameter completion at the typed boundary.
     """
+    settings = get_settings()
     if admin:
         import os
 
@@ -85,6 +86,7 @@ def ensure_bucket(name: str) -> None:
 def create_buckets() -> None:
     """One-time setup (admin identity): create the medallion buckets if missing."""
     admin = s3_client(admin=True)
+    settings = get_settings()
     for bucket in (settings.bronze_bucket, settings.silver_bucket, settings.gold_bucket):
         if bucket_exists(bucket):
             log.info("bucket already exists", extra={"bucket": bucket})
@@ -107,6 +109,7 @@ def pyarrow_s3() -> S3FileSystem:
     """A pyarrow S3 filesystem pointed at SeaweedFS (for reading Bronze Parquet)."""
     import pyarrow.fs as pafs  # lazy: pyarrow only needed by readers
 
+    settings = get_settings()
     host = settings.s3_endpoint_url.split("://", 1)[-1]  # strip scheme -> host:port
     scheme = "https" if settings.s3_endpoint_url.startswith("https") else "http"
     return pafs.S3FileSystem(  # type: ignore[attr-defined]  # pyarrow.fs lacks __all__
@@ -125,7 +128,7 @@ def bronze_cdc_prefix_exists(table: str) -> bool:
     """
     s3 = s3_client()
     resp = s3.list_objects_v2(
-        Bucket=settings.bronze_bucket,
+        Bucket=get_settings().bronze_bucket,
         Prefix=f"wwi_cdc/{table}/",
         MaxKeys=1,
     )
@@ -134,6 +137,7 @@ def bronze_cdc_prefix_exists(table: str) -> bool:
 
 def delta_storage_options() -> dict[str, str]:
     """storage_options for delta-rs reads/writes against SeaweedFS (path-style, http)."""
+    settings = get_settings()
     return {
         "AWS_ACCESS_KEY_ID": settings.s3_access_key,
         "AWS_SECRET_ACCESS_KEY": settings.s3_secret_key,

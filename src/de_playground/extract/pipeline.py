@@ -14,7 +14,7 @@ import dlt
 
 from de_playground.common.lake import ensure_bucket
 from de_playground.common.logging import get_logger, set_correlation_id
-from de_playground.config import settings
+from de_playground.config import get_settings
 from de_playground.extract.source import wwi_resources
 
 log = get_logger(__name__)
@@ -24,6 +24,7 @@ DATASET_NAME = "wwi"
 
 
 def build_pipeline() -> dlt.Pipeline:
+    settings = get_settings()
     return dlt.pipeline(
         pipeline_name=PIPELINE_NAME,
         destination=dlt.destinations.filesystem(
@@ -42,6 +43,7 @@ def build_pipeline() -> dlt.Pipeline:
 
 def run() -> None:
     set_correlation_id()
+    settings = get_settings()
     ensure_bucket(settings.bronze_bucket)
     pipeline = build_pipeline()
     load_info = pipeline.run(

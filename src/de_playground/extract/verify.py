@@ -19,21 +19,22 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from de_playground.common.lake import pyarrow_s3
-from de_playground.config import settings
+from de_playground.config import get_settings
 from de_playground.extract.tables import WWI_TABLES
 
 
 def bronze_counts() -> dict[str, int]:
     fs = pyarrow_s3()
     counts: dict[str, int] = {}
+    bronze_bucket = get_settings().bronze_bucket
     for spec in WWI_TABLES:
-        path = f"{settings.bronze_bucket}/wwi/{spec.resource_name}"
+        path = f"{bronze_bucket}/wwi/{spec.resource_name}"
         counts[spec.resource_name] = ds.dataset(path, filesystem=fs, format="parquet").count_rows()
     return counts
 
 
 def source_counts() -> dict[str, int]:
-    engine = create_engine(settings.mssql_url)
+    engine = create_engine(get_settings().mssql_url)
     counts: dict[str, int] = {}
     with engine.connect() as conn:
         for spec in WWI_TABLES:
@@ -56,7 +57,7 @@ def _build_report(bronze: dict[str, int], source: dict[str, int] | None) -> dict
         s = source.get(name, 0)
         status = "OK" if s == b else ("APPEND" if b > s else "DIFF")
         rows.append({"table": name, "source": s, "bronze": b, "status": status})
-    return {"bronze_bucket": settings.bronze_bucket, "tables": rows}
+    return {"bronze_bucket": get_settings().bronze_bucket, "tables": rows}
 
 
 def main() -> None:

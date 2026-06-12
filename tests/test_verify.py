@@ -42,8 +42,17 @@ def test_build_report_status_diff_when_bronze_less_than_source():
 
 
 def test_build_report_uses_settings_bucket_name():
-    """The report carries the bronze bucket name so consumers can disambiguate envs."""
-    with patch("de_playground.extract.verify.settings") as mock_settings:
-        mock_settings.bronze_bucket = "bronze-test-env"
+    """The report carries the bronze bucket name so consumers can disambiguate envs.
+
+    The verify module now calls `get_settings()` at-use; swap it via the factory rather
+    than a module-level alias — exactly the testability win the WS4 6b refactor was for.
+    """
+    from de_playground.config import get_settings
+
+    fake = type("S", (), {"bronze_bucket": "bronze-test-env"})()
+    with patch("de_playground.extract.verify.get_settings", return_value=fake):
         report = _build_report({}, None)
     assert report["bronze_bucket"] == "bronze-test-env"
+    # The real cached instance is unaffected — verify get_settings() didn't get swapped
+    # in the lru_cache itself.
+    get_settings.cache_clear()  # ensure no test bleed-through

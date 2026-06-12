@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from pyspark.sql import SparkSession
 
-from de_playground.config import settings
+from de_playground.config import get_settings
 
 # Hadoop 3.3.4 ships with Spark 3.5; the S3A jars must match it.
 _S3A_PACKAGES = [
@@ -29,6 +29,7 @@ _S3A_PACKAGES = [
 
 def _base_builder(app_name: str, master: str) -> SparkSession.Builder:
     """Shared config: Delta SQL extensions + S3A pointed at SeaweedFS."""
+    settings = get_settings()
     return (
         # PySpark stubs declare `builder` as a classproperty; pyright can't see through to
         # the Builder methods, but the API is well-defined and verified by mypy + runtime.
@@ -64,6 +65,6 @@ def get_spark(app_name: str = "de-playground", master: str = "local[*]") -> Spar
 
 def get_cluster_spark(app_name: str = "de-playground") -> SparkSession:
     """Cluster mode: master from SPARK_MASTER_URL; jars are baked into the Spark image."""
-    spark = _base_builder(app_name, settings.spark_master_url).getOrCreate()
+    spark = _base_builder(app_name, get_settings().spark_master_url).getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
     return spark

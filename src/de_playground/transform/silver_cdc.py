@@ -19,7 +19,7 @@ from pyspark.sql import functions as F
 
 from de_playground.common.lake import bronze_cdc_prefix_exists, ensure_bucket, s3a
 from de_playground.common.logging import get_logger
-from de_playground.config import settings
+from de_playground.config import get_settings
 from de_playground.transform.silver import SILVER_TABLES, SilverSpec
 
 log = get_logger(__name__)
@@ -40,6 +40,7 @@ def collapse_changes(df: DataFrame, primary_key: str) -> DataFrame:
 
 
 def build_silver_cdc(spark: SparkSession, specs: list[SilverSpec] = SILVER_TABLES) -> None:
+    settings = get_settings()
     ensure_bucket(settings.silver_bucket)
     for spec in specs:
         src = s3a(settings.bronze_bucket, "wwi_cdc", spec.table)
