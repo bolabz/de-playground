@@ -129,6 +129,56 @@ LAYER ?= gold
 inspect:  ## Inspect a layer (delta-rs/pyarrow, no Spark): make inspect LAYER=bronze|silver|gold
 	uv run python -m de_playground.transform.inspect_lake $(LAYER)
 
+# ---- Gate-0 regression oracle (Python-hardening series, 2026-06) ----
+# Capture once on unmodified main (`make baseline`), then `make regression` after each commit
+# in the hardening series re-captures into _now/ and diffs against the baseline. Drift => the
+# commit changed observable pipeline output. See docs/PYTHON_HARDENING_PLAN.md "Validation".
+BASELINE_DIR ?= data/baselines/2026-06-11
+
+# JSON log lines from de_playground.* go to STDERR (the structured logger writes to sys.stderr)
+# and include random per-run keys (ts, correlation_id); strip with jq so byte-diffs only flag
+# changes in the underlying report data. NOTE: write to a .raw file then jq from the file —
+# delta-rs's Rust threadpool keeps the stderr FD open after main() returns, so a `... | jq`
+# pipe never sees EOF and hangs on silver/gold inspect.
+DE_LOG_STRIP := jq -S 'del(.ts, .correlation_id)'
+define _capture_report
+	uv run python -m $(1) > $(2).raw 2>&1
+	$(DE_LOG_STRIP) $(2).raw > $(2)
+	rm -f $(2).raw
+endef
+
+.PHONY: baseline
+baseline:  ## Capture the Gate-0 regression baseline (run once on unmodified main, post-pipeline)
+	@command -v jq >/dev/null || { echo "jq not installed (brew install jq)"; exit 1; }
+	@mkdir -p $(BASELINE_DIR)
+	$(call _capture_report,de_playground.extract.verify --json,$(BASELINE_DIR)/counts.json)
+	$(call _capture_report,de_playground.transform.inspect_lake bronze --json,$(BASELINE_DIR)/inspect_bronze.json)
+	$(call _capture_report,de_playground.transform.inspect_lake silver --json,$(BASELINE_DIR)/inspect_silver.json)
+	$(call _capture_report,de_playground.transform.inspect_lake gold   --json,$(BASELINE_DIR)/inspect_gold.json)
+	curl -fs localhost:9200/fact_sales/_count                                  | jq -S . > $(BASELINE_DIR)/es_count.json
+	curl -fs 'localhost:8000/sales/search?q=USB&limit=5'                       | jq -S . > $(BASELINE_DIR)/es_query_usb.json
+	curl -fs 'localhost:8000/sales/search?customer_id=1&min_total=100'         | jq -S . > $(BASELINE_DIR)/es_query_customer.json
+	curl -fs  localhost:8000/sales/501                                         | jq -S . > $(BASELINE_DIR)/es_query_one.json
+	-uv run ruff check .  > $(BASELINE_DIR)/ruff.txt   2>&1
+	-uv run mypy src      > $(BASELINE_DIR)/mypy.txt   2>&1
+	-uv run pytest -v     > $(BASELINE_DIR)/pytest.txt 2>&1
+	@echo ">> baseline captured at $(BASELINE_DIR)"
+
+.PHONY: regression
+regression:  ## Re-capture into $(BASELINE_DIR)/_now and diff vs. baseline (exit non-zero on drift)
+	@command -v jq >/dev/null || { echo "jq not installed (brew install jq)"; exit 1; }
+	@test -d $(BASELINE_DIR) || { echo "no baseline at $(BASELINE_DIR) — run 'make baseline' first"; exit 1; }
+	@mkdir -p $(BASELINE_DIR)/_now
+	$(call _capture_report,de_playground.extract.verify --json,$(BASELINE_DIR)/_now/counts.json)
+	$(call _capture_report,de_playground.transform.inspect_lake bronze --json,$(BASELINE_DIR)/_now/inspect_bronze.json)
+	$(call _capture_report,de_playground.transform.inspect_lake silver --json,$(BASELINE_DIR)/_now/inspect_silver.json)
+	$(call _capture_report,de_playground.transform.inspect_lake gold   --json,$(BASELINE_DIR)/_now/inspect_gold.json)
+	curl -fs localhost:9200/fact_sales/_count                                  | jq -S . > $(BASELINE_DIR)/_now/es_count.json
+	curl -fs 'localhost:8000/sales/search?q=USB&limit=5'                       | jq -S . > $(BASELINE_DIR)/_now/es_query_usb.json
+	curl -fs 'localhost:8000/sales/search?customer_id=1&min_total=100'         | jq -S . > $(BASELINE_DIR)/_now/es_query_customer.json
+	curl -fs  localhost:8000/sales/501                                         | jq -S . > $(BASELINE_DIR)/_now/es_query_one.json
+	diff -ru --exclude=_now --exclude='ruff.txt' --exclude='mypy.txt' --exclude='pytest.txt' $(BASELINE_DIR) $(BASELINE_DIR)/_now
+
 # ---- Phase 2 on the CLUSTER (spark-submit) ----
 .PHONY: wheel
 wheel:  ## Build the de_playground wheel (shipped to executors via --py-files)
