@@ -7,6 +7,24 @@ mark milestones rather than released versions.
 ## [Unreleased]
 
 ### Added
+- **WS4 6a / typed cross-plane contracts (2026-06-11):** new
+  `src/de_playground/contracts.py` defines the shared Pydantic models — `FactSalesDoc`,
+  `SalesSearchQuery`, `SalesSearchResult` — plus the single canonical `INDEX_FACT_SALES`
+  string. Producer (`load.to_elasticsearch.to_actions`) and serving (`api.main`) both
+  import them, so Finding 9's duplicated implicit contract (the same `"fact_sales"`
+  string + document field set redeclared in two modules) is gone. `to_actions` now
+  `FactSalesDoc.model_validate(row)`s every Gold row before yielding the bulk action;
+  bad rows fail loud rather than landing as broken documents (`indexed: 231412, errors:
+  0` against the WWI sample). FastAPI endpoints use `response_model=SalesSearchResult`
+  /`FactSalesDoc` for automatic schema + validation. WS3 layers contract updated:
+  contracts joins config at the leaf level (`config | contracts`). WS7's "api has no
+  de_playground dep" was relaxed for this one module — api/pyproject.toml adds
+  `de-playground` as a `[tool.uv.sources] de-playground = { workspace = true }` dep, and
+  the api Dockerfile build context broadened to the repo root (`build: { context: ..,
+  dockerfile: api/Dockerfile }`) so both packages can be installed. The serving plane
+  still imports nothing from the pipeline runtime — only the schema. Verified: `make
+  regression` empty; `/health` + 3 canonical queries byte-identical to Gate-0.
+
 - **WS7 / uv workspaces; api/ promoted to its own pyproject (2026-06-11):** root
   `pyproject.toml` declares `[tool.uv.workspace] members = ["api"]`. New
   `api/pyproject.toml` owns the serving-plane deps (`fastapi`, `uvicorn[standard]`,

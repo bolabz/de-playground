@@ -703,6 +703,7 @@ dependencies = [
     { name = "deltalake" },
     { name = "dlt", extra = ["parquet", "s3", "sql-database"] },
     { name = "pyarrow" },
+    { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyodbc" },
     { name = "sqlalchemy" },
@@ -738,6 +739,7 @@ requires-dist = [
     { name = "pandas", marker = "extra == 'eda'", specifier = ">=2.2" },
     { name = "polars", marker = "extra == 'eda'", specifier = ">=1.0" },
     { name = "pyarrow", specifier = ">=16.0" },
+    { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "pyodbc", specifier = ">=5.1" },
     { name = "pyspark", marker = "extra == 'process'", specifier = "==3.5.8" },
@@ -752,6 +754,7 @@ name = "de-playground-api"
 version = "0.1.0"
 source = { editable = "api" }
 dependencies = [
+    { name = "de-playground" },
     { name = "elasticsearch" },
     { name = "fastapi" },
     { name = "opentelemetry-distro" },
@@ -761,6 +764,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "de-playground", editable = "." },
     { name = "elasticsearch", specifier = ">=8.14,<9" },
     { name = "fastapi", specifier = ">=0.111" },
     { name = "opentelemetry-distro" },

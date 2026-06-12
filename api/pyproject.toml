@@ -1,8 +1,9 @@
 # The FastAPI serving deployable — a workspace member of de-playground (uv workspace at the
-# repo root). Deliberately has NO dependency on the de_playground core library: the serving
-# plane talks to Elasticsearch via HTTP, never imports the pipeline. This isolation is the
-# same one import-linter's forbidden contract would enforce if api/ ever grew a package.
-# See docs/PYTHON_HARDENING_PLAN.md WS7 + ARCHITECTURE.md "three planes".
+# repo root). The serving plane talks to Elasticsearch via HTTP and never imports pipeline
+# RUNTIME modules; the one exception (WS4) is `de_playground.contracts`, the typed Pydantic
+# schema producer + serving share — the cross-plane contract lives in one place rather than
+# being implicitly redeclared on both sides (kills hardening-plan Finding 9). See
+# docs/PYTHON_HARDENING_PLAN.md WS4 + WS7.
 [project]
 name = "de-playground-api"
 version = "0.1.0"
@@ -16,7 +17,13 @@ dependencies = [
     # logging warnings if no collector is running; serves requests either way.
     "opentelemetry-distro",
     "opentelemetry-exporter-otlp",
+    # Shared cross-plane contracts (the FactSalesDoc / SalesSearchResult Pydantic models).
+    # Workspace dep — resolves to the local source via the root uv.lock.
+    "de-playground",
 ]
+
+[tool.uv.sources]
+de-playground = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

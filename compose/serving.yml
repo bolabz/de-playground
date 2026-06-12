@@ -31,7 +31,11 @@ services:
 
   # ---------- FastAPI  <->  same code on Azure Container Apps / App Service ----------
   api:
-    build: ../api # holds Dockerfile + main.py
+    # Build context is the repo root (post-WS4 the API imports de_playground.contracts;
+    # the Dockerfile needs to see api/ + src/de_playground/ + the workspace pyproject).
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
     environment:
       ES_URL: "http://elasticsearch:9200"
       # OpenTelemetry: the API exports traces+metrics+logs to the collector (if it's running).

@@ -11,7 +11,6 @@ idempotent strategy (re-running yields the same index).
 from __future__ import annotations
 
 from collections.abc import Iterator
-from datetime import date
 
 from deltalake import DeltaTable
 from elasticsearch import Elasticsearch
@@ -21,10 +20,11 @@ from de_playground.common.lake import delta_storage_options
 from de_playground.common.logging import get_logger, set_correlation_id
 from de_playground.common.retry import retry_until
 from de_playground.config import settings
+from de_playground.contracts import INDEX_FACT_SALES, FactSalesDoc
 
 log = get_logger(__name__)
 
-INDEX = "fact_sales"
+INDEX = INDEX_FACT_SALES  # backward-compat alias; new code uses INDEX_FACT_SALES directly
 
 # Explicit mapping: description is full-text (with a keyword subfield for exact match/aggs);
 # ids/measures typed so range + term queries and Kibana aggregations behave.
@@ -65,12 +65,20 @@ def read_fact_sales() -> list[dict]:
 
 
 def to_actions(rows: list[dict]) -> Iterator[dict]:
+    """Validate each Gold row against FactSalesDoc, then yield an ES bulk action.
+
+    Pydantic enforces the producer contract — extra fields or missing fields fail loud at
+    index time rather than landing as a half-broken document. `mode="json"` returns date
+    as an ISO string (matching what ES expects), so we don't need the old isoformat dance.
+    """
     for row in rows:
-        source = dict(row)
-        order_date = source.get("order_date")
-        if isinstance(order_date, date):
-            source["order_date"] = order_date.isoformat()  # ES wants an ISO string
-        yield {"_index": INDEX, "_id": source["order_line_id"], "_source": source}
+        doc = FactSalesDoc.model_validate(row)
+        source = doc.model_dump(mode="json")
+        yield {
+            "_index": INDEX_FACT_SALES,
+            "_id": doc.order_line_id,
+            "_source": source,
+        }
 
 
 def run() -> None:
