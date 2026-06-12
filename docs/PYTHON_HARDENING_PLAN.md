@@ -7,10 +7,10 @@ modularity/testing themes into an executable sequence). Reference history in
 [`../CHANGELOG.md`](../CHANGELOG.md); design constraints by intent in
 [`ARCHITECTURE.md`](ARCHITECTURE.md) ("Deliberate non-goals").
 
-> **Status: COMPLETE — P1 series + post-mortem corrections landed 2026-06-11 across 22
+> **Status: COMPLETE — P1 series + post-mortem corrections landed 2026-06-11 across 23
 > commits on top of 9783126.** Original implementation pass: 15 commits (1 doc precursor
 > + 1 lint fix + 1 oracle target + 1 hang fix + 8 workstreams + 1 final-acceptance
-> target). Post-mortem corrections: 7 commits (api isolation made enforceable via
+> target). Post-mortem corrections: 8 commits (api isolation made enforceable via
 > import-linter contract on `root_packages += ["api"]`; missing `elasticsearch` core dep
 > restored; WS5 Spark coverage completed for `silver.conform` / `gold.build_fact_sales`
 > / `gold.build_fact_invoices`; `MAPPING` codegen'd from `FactSalesDoc` via
