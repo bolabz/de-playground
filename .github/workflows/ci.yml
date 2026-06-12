@@ -65,17 +65,21 @@ jobs:
           python-version: "3.11"
 
       - name: pip-audit (known-CVE deps; full workspace incl. api/)
-        # `--all-extras --all-packages` ensures the api/ workspace member's deps
-        # (elasticsearch, fastapi, opentelemetry-*) are also audited, not just the root.
-        # Strict mode FAILS on any finding; when an unfixable CVE shows up against a
-        # pinned EOL dep (Spark 3.5, ES 8.14 — see BACKLOG P1), add it to the inline
-        # `--ignore-vuln <CVE-ID>` list below WITH a one-line rationale so the gate stays
-        # trustworthy, not noisy. (Source plan WS8: "seed a baseline".)
+        # Audit the LOCKED third-party deps, not the installed environment. `uv export
+        # --no-emit-workspace` drops the two local projects (de-playground, de-playground-api)
+        # — auditing the env directly fails because pip-audit can't look up editable local
+        # packages on PyPI, and `--strict` turns that skip into a hard error. `--all-extras
+        # --all-packages` keeps the api/ member's deps (elasticsearch, fastapi, otel) in scope.
+        # `--no-deps --disable-pip` makes pip-audit check the already-pinned set against the
+        # vuln DB WITHOUT re-resolving/installing (which can fail on platform/python mismatch).
+        # When an unfixable CVE hits a pinned EOL dep (Spark 3.5, ES 8.14 — BACKLOG P1), add it
+        # to `--ignore-vuln <ID>` WITH a one-line rationale so the gate stays trustworthy.
         run: |
-          uv sync --all-extras --all-packages
-          uv run --with pip-audit pip-audit --strict
-        # Example for the future:
-        # uv run --with pip-audit pip-audit --strict \
+          uv export --frozen --all-extras --all-packages --no-emit-workspace \
+            --no-hashes -o requirements-audit.txt
+          uv tool run pip-audit --strict --no-deps --disable-pip -r requirements-audit.txt
+        # Example for the future (uv tool run == uvx; use the long form — `uvx` isn't always on PATH):
+        # uv tool run pip-audit --strict --no-deps --disable-pip -r requirements-audit.txt \
         #   --ignore-vuln GHSA-xxxx-yyyy-zzzz  # py4j: unfixable; tracked in Spark 4 upgrade (BACKLOG P1)
 
       - name: gitleaks (secrets scan; .env.example placeholders allowlisted)

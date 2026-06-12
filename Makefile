@@ -34,8 +34,12 @@ lint:  ## ruff lint + format check
 	uv run ruff format --check .
 
 .PHONY: test
-test:  ## Run pytest
+test:  ## Run pytest (DB-free + Java-free; spark tests deselected by addopts)
 	uv run pytest
+
+.PHONY: test-spark
+test-spark:  ## Run the opt-in Spark-marked transform tests (conftest auto-pins JDK 17)
+	uv run pytest -m pyspark
 
 # ---- Docker phases ----
 .PHONY: up-ingest
@@ -299,8 +303,29 @@ api-forward:  ## Port-forward the in-cluster API to http://localhost:8001/docs
 	kubectl -n de-playground port-forward svc/api-de-playground-api 8001:80
 
 .PHONY: ci-local
-ci-local:  ## Run the GitHub Actions CI workflow locally with act (Apple Silicon needs amd64)
-	act push --container-architecture linux/amd64
+verify:  ## Run the full CI gate locally WITHOUT act — the reliable green-light (no JS-action plumbing)
+	# Same gates as .github/workflows/ci.yml, run directly via uv. This is the source of truth
+	# for "is my CI green?" locally; `make ci-local` (act) trips on node/PATH in JS-action steps
+	# (see docs/TROUBLESHOOTING.md). gitleaks + lychee run on GitHub (action-based) — not here.
+	uv run ruff check .
+	uv run ruff format --check .
+	uv run mypy src
+	uv run pyright src api
+	uv run lint-imports
+	uv run pytest
+	$(MAKE) test-spark
+	uv export --frozen --all-extras --all-packages --no-emit-workspace --no-hashes -o requirements-audit.txt
+	uv tool run pip-audit --strict --no-deps --disable-pip -r requirements-audit.txt
+	@echo ">> verify: all CI gates passed locally"
+
+ci-local:  ## Watch the workflow under act (best-effort; JS-action post-steps red out — use `make verify` for a real green-light)
+	# act runs JS actions via `docker exec node`, passing the accumulated PATH; PATH-mutating
+	# steps (setup-java's add-path, uv's venv activation) push node's dir off PATH, so the NEXT
+	# JS exec (cache-save post-step, gitleaks, setup-uv-after-setup-java) 127s. This is act-only
+	# (nektos/act#107), NOT a CI defect — every real gate still runs and passes. GitHub's runners
+	# have node on a stable PATH, so real CI is green. For a trustworthy local check use `make verify`.
+	act push --container-architecture linux/amd64 \
+		-P ubuntu-latest=catthehacker/ubuntu:act-latest --pull
 
 # ---- Phase 5b: Airflow 3 on the cluster (official chart, KubernetesExecutor) ----
 # Image flow is Phase 5c (registry), same as the API. Difference: Airflow is deployed by

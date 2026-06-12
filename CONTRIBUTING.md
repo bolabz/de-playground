@@ -80,8 +80,11 @@ Docker/Java needed.
 The Spark transform logic (silver dedupe, silver_cdc collapse, gold fact_sales /
 fact_invoices / daily-agg / billed-daily-agg) is covered by **18 tests** in
 `tests/test_transforms_spark.py`, behind a `pyspark` pytest marker. They run on the opt-in
-CI job (with JDK 17) and locally via `JAVA_HOME=$(java_home -v 17) uv run pytest -m
-pyspark`; the default `make test` deselects them so they never block a Java-free run.
+CI job (with JDK 17) and locally via **`make test-spark`** — the `spark` fixture in
+`tests/conftest.py` auto-detects JDK 17 (`/usr/libexec/java_home -v 17`, then Homebrew's
+keg-only `openjdk@17`) and pins `JAVA_HOME` before SparkSession start, so you don't need
+to remember the explicit `JAVA_HOME=…` env-var dance. The default `make test` deselects
+them so they never block a Java-free run.
 
 The `pyspark`-marked tests import the transform modules at the top — guarded by
 `pytest.importorskip("pyspark")` so a default `uv sync --extra dev` collection still

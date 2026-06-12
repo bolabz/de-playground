@@ -48,6 +48,15 @@ tables — make sure you're on the latest `silver_cdc.py`.
 Spark 3.5 supports Java 8/11/17 only (not 21/26). Install JDK 17 (`brew install openjdk@17`);
 the `transform`/`silver`/`gold` targets auto-select it.
 
+**`pytest -m pyspark` fails with `Py4JJavaError: ... None.org.apache.spark.api.java.JavaSparkContext`**
+Same root cause as above — Spark 3.5 trying to start under JDK 21/26. The `spark` fixture
+in `tests/conftest.py` now auto-detects JDK 17 (via `/usr/libexec/java_home` then Homebrew's
+`openjdk@17`) and pins `JAVA_HOME` before SparkSession start; `make test-spark` (or
+`uv run pytest -m pyspark`) Just Works on a host with `brew install openjdk@17` done.
+If detection can't find JDK 17 (rare — e.g. a Linux dev box where openjdk-17 lives at a
+non-standard path), set `JAVA_HOME=/path/to/jdk17` before the command and the fixture will
+trust it.
+
 **`ModuleNotFoundError: No module named 'pyspark'`**
 `uv sync --extra serve` (or any single-extra sync) uninstalled the `process` extra. Use
 `make sync-all` to keep all extras. (Use a Python 3.11 venv — PySpark 3.5 isn't tested on 3.13+/3.14.)
@@ -247,6 +256,38 @@ The `aws_s3` connection (`AIRFLOW_CONN_AWS_S3` in values) must reach SeaweedFS: 
 exists (`make create-buckets`), `host.docker.internal:8333` is resolvable from pods, and the creds
 match your `.env` app identity. SeaweedFS needs path-style addressing (already set in the conn's
 `config_kwargs`).
+
+## CI (local, via `act` — `make ci-local`)
+
+**`pip-audit` fails: `Dependency not found on PyPI` / `distribution marked as editable` (de-playground)**
+`pip-audit` was auditing the installed environment, which includes the two local workspace
+projects (`de-playground`, `de-playground-api`) that `uv` installs *editable* — pip-audit can't
+look an editable local package up on PyPI, and `--strict` (fail on any uncollectable dependency)
+turns that into a hard error. `--skip-editable` doesn't help: a *skipped* dep is still a strict
+failure. Fix (already in `.github/workflows/ci.yml`): audit the **locked** third-party set
+instead of the environment —
+`uv export --frozen --all-extras --all-packages --no-emit-workspace --no-hashes -o requirements-audit.txt`
+drops the local packages, then `uv tool run pip-audit --strict --no-deps --disable-pip -r requirements-audit.txt`
+checks the pinned versions against the vuln DB without re-resolving (which would otherwise fail on
+a platform/Python mismatch). Use `uv tool run` (not `uvx`) — they're equivalent, but the `uvx`
+shim isn't always on `PATH`. Run those two lines directly to reproduce; expect `No known
+vulnerabilities found`.
+
+**`act` (`make ci-local`) jobs fail with `exec: "node": executable file not found in $PATH` (exit 127)**
+An `act`-only limitation ([nektos/act#107](https://github.com/nektos/act/issues/107)), **not a CI
+defect.** `act` runs JS actions via `docker exec node …` using the *accumulated* `PATH`; PATH-mutating
+steps — `actions/setup-java`'s `::add-path::`, or `uv`'s venv activation prepending `.venv/bin` — push
+the directory holding `node` off `PATH`, so the *next* JS exec (a `setup-*` cache-save post-step, the
+`gitleaks` action, or `setup-uv` after `setup-java` in the pyspark job) 127s. Pinning a node-bearing
+image (`make ci-local` uses `catthehacker/ubuntu:act-latest --pull`) does **not** fix it — node is
+present, it's a PATH-ordering problem. Every *real* gate still runs and passes (ruff, format,
+`mypy --strict`, pyright, `lint-imports`, pytest, pip-audit) — only `act`'s action machinery reds out.
+GitHub's hosted runners keep `node` on a stable `PATH`, so **real CI is green**.
+
+**The fix:** for a trustworthy local green-light, run **`make verify`** — it runs the exact same gates
+directly through `uv`, with no `act` and no JS-action plumbing. Use `make ci-local` only to *watch* the
+workflow shape, and push to see the fully-green run on GitHub. (`gitleaks` + `lychee` are action-based;
+they run on GitHub, not in `make verify`.)
 
 ## General
 
