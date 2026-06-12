@@ -54,7 +54,7 @@ boto3==1.43.0
     # via de-playground
 boto3-stubs==1.43.19
     # via de-playground
-botocore==1.43.0
+botocore==1.43.28
     # via
     #   aiobotocore
     #   boto3
