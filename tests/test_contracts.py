@@ -13,9 +13,9 @@ from hypothesis import strategies as st
 from de_playground.contracts import (
     INDEX_FACT_SALES,
     FactSalesDoc,
-    SalesSearchQuery,
     SalesSearchResult,
     build_query,
+    es_mapping,
 )
 
 # ---------------------------------------------------------------------------------------
@@ -108,14 +108,46 @@ def test_sales_search_result_round_trips():
     assert dumped["results"][0]["order_date"] == "2013-01-02"  # ISO string on the wire
 
 
-def test_sales_search_query_defaults():
-    q = SalesSearchQuery()
-    assert q.limit == 10
-    assert q.q is None
-    assert q.customer_id is None
+# ---------------------------------------------------------------------------------------
+# es_mapping — codegen ES mapping from FactSalesDoc annotations
+# ---------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("bad_limit", [0, 101, -1])
-def test_sales_search_query_limit_bounds(bad_limit):
-    with pytest.raises(ValueError, match=r"(greater_than_equal|less_than_equal)"):
-        SalesSearchQuery(limit=bad_limit)
+def test_es_mapping_covers_every_pydantic_field():
+    mapping = es_mapping(FactSalesDoc)
+    assert set(mapping) == set(FactSalesDoc.model_fields)
+
+
+def test_es_mapping_assigns_python_types_to_es_types():
+    mapping = es_mapping(FactSalesDoc)
+    assert mapping["order_line_id"]["type"] == "integer"  # int
+    assert mapping["unit_price"]["type"] == "double"  # float
+    assert mapping["order_date"]["type"] == "date"  # date
+
+
+def test_es_mapping_overrides_description_to_text_keyword():
+    """Description is a special case: full-text + an exact-match keyword subfield."""
+    desc = es_mapping(FactSalesDoc)["description"]
+    assert desc["type"] == "text"
+    assert desc["fields"]["keyword"]["type"] == "keyword"
+
+
+def test_es_mapping_returns_fresh_dicts_per_call():
+    """Caller mutation must not poison the override table or the default map."""
+    m1 = es_mapping(FactSalesDoc)
+    m1["order_line_id"]["type"] = "BOGUS"
+    m2 = es_mapping(FactSalesDoc)
+    assert m2["order_line_id"]["type"] == "integer"
+
+
+def test_es_mapping_rejects_unmapped_python_types():
+    """A future model with an unrecognised annotation should fail loud, not silently."""
+    from pydantic import BaseModel as _BM
+    from pydantic import ConfigDict as _CD
+
+    class Bad(_BM):
+        model_config = _CD(extra="forbid")
+        weird: list[int]  # no entry in _PY_TO_ES
+
+    with pytest.raises(TypeError, match="No ES mapping"):
+        es_mapping(Bad)

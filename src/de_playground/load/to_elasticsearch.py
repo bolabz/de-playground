@@ -20,35 +20,18 @@ from de_playground.common.lake import delta_storage_options
 from de_playground.common.logging import get_logger, set_correlation_id
 from de_playground.common.retry import retry_until
 from de_playground.config import settings
-from de_playground.contracts import INDEX_FACT_SALES, FactSalesDoc
+from de_playground.contracts import INDEX_FACT_SALES, FactSalesDoc, es_mapping
 
 log = get_logger(__name__)
 
 INDEX = INDEX_FACT_SALES  # backward-compat alias; new code uses INDEX_FACT_SALES directly
 
-# Explicit mapping: description is full-text (with a keyword subfield for exact match/aggs);
-# ids/measures typed so range + term queries and Kibana aggregations behave.
-MAPPING: dict[str, dict] = {
-    "order_line_id": {"type": "integer"},
-    "order_id": {"type": "integer"},
-    "customer_id": {"type": "integer"},
-    "salesperson_person_id": {"type": "integer"},
-    "stock_item_id": {"type": "integer"},
-    "description": {
-        "type": "text",
-        "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
-    },
-    "quantity": {"type": "integer"},
-    "picked_quantity": {"type": "integer"},
-    "unit_price": {"type": "double"},
-    "tax_rate": {"type": "double"},
-    "extended_price": {"type": "double"},
-    "tax_amount": {"type": "double"},
-    "line_total": {"type": "double"},
-    "order_date": {"type": "date"},
-    "order_year": {"type": "integer"},
-    "order_month": {"type": "integer"},
-}
+# WS4 6a post-mortem: was a 16-entry hand-maintained dict that duplicated FactSalesDoc's
+# field set (residual Finding 9 — every new Pydantic field had to be added in two places
+# or risk drift). Now derived once from the Pydantic model via `es_mapping()`; the
+# codegen raises TypeError if a future FactSalesDoc field has no Python→ES type
+# mapping, so drift can't slip in silently.
+MAPPING: dict[str, dict[str, object]] = es_mapping(FactSalesDoc)
 
 
 def wait_for_es(es: Elasticsearch) -> None:
