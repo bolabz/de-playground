@@ -4,11 +4,13 @@ All tests in this module require a JVM + PySpark; opt-in via the `pyspark` marke
 CI stays Java-free, the opt-in CI job runs `pytest -m pyspark` with JDK 17 installed.
 The `spark` fixture lives in tests/conftest.py.
 
-Coverage scope (from PYTHON_HARDENING_PLAN.md WS5 step 3):
+Coverage scope (from PYTHON_HARDENING_PLAN.md WS5 step 3 + post-mortem):
   - silver_cdc.collapse_changes — synthetic change feed → expected current state.
   - silver.conform — dedupe-to-latest + drop dlt bookkeeping.
   - gold.build_fact_sales — orders ⋈ lines + derived revenue measures.
   - gold.build_fact_invoices — invoices ⋈ invoice_lines + line_profit + measures.
+  - gold.build_daily_agg — fact_sales → daily ordered roll-up.
+  - gold.build_billed_daily_agg — fact_invoices → daily billed roll-up incl. profit.
 """
 
 from __future__ import annotations
@@ -23,6 +25,8 @@ import pytest
 pytest.importorskip("pyspark")
 
 from de_playground.transform.gold import (
+    build_billed_daily_agg,
+    build_daily_agg,
     build_fact_invoices,
     build_fact_sales,
 )
@@ -289,3 +293,96 @@ def test_build_fact_invoices_inner_join_shape(spark):
     fact = build_fact_invoices(invoices, invoice_lines).collect()
     assert 999 not in {r["invoice_line_id"] for r in fact}
     assert len(fact) == 3  # 2 lines on inv 1 + 1 on inv 2
+
+
+# ---------------------------------------------------------------------------------------
+# gold.build_daily_agg — fact_sales → daily ordered roll-up
+# ---------------------------------------------------------------------------------------
+
+
+def _fact_sales_minimal(spark):
+    """Minimal fact_sales-shaped rows (only the columns build_daily_agg consumes)."""
+    return spark.createDataFrame(
+        [
+            # (order_date, order_id, quantity, line_total)
+            (date(2024, 3, 15), 1, 4, 115.0),  # order 1, line A
+            (date(2024, 3, 15), 1, 2, 115.0),  # order 1, line B (same order)
+            (date(2024, 3, 15), 2, 1, 27.5),  # order 2, line C (different order, same day)
+            (date(2024, 4, 1), 3, 5, 287.5),  # order 3, next day
+        ],
+        ["order_date", "order_id", "quantity", "line_total"],
+    )
+
+
+def test_build_daily_agg_counts_distinct_orders_per_day(spark):
+    """countDistinct on order_id is the load-bearing dedup; same-day lines on the same
+    order count once toward num_orders but each toward num_lines."""
+    agg = {r["order_date"]: r for r in build_daily_agg(_fact_sales_minimal(spark)).collect()}
+    mar15 = agg[date(2024, 3, 15)]
+    assert mar15["num_orders"] == 2  # orders 1 and 2 (line A + B share order 1)
+    assert mar15["num_lines"] == 3
+    assert mar15["total_quantity"] == 4 + 2 + 1
+
+
+def test_build_daily_agg_sums_revenue_and_rounds_to_two_decimals(spark):
+    agg = {r["order_date"]: r for r in build_daily_agg(_fact_sales_minimal(spark)).collect()}
+    mar15 = agg[date(2024, 3, 15)]
+    # 115 + 115 + 27.5 = 257.5; F.round(... , 2) preserves it as-is.
+    assert mar15["total_revenue"] == 257.5
+    assert agg[date(2024, 4, 1)]["total_revenue"] == 287.5
+
+
+def test_build_daily_agg_orders_rows_by_date(spark):
+    rows = build_daily_agg(_fact_sales_minimal(spark)).collect()
+    assert [r["order_date"] for r in rows] == [date(2024, 3, 15), date(2024, 4, 1)]
+
+
+# ---------------------------------------------------------------------------------------
+# gold.build_billed_daily_agg — fact_invoices → daily billed roll-up
+# ---------------------------------------------------------------------------------------
+
+
+def _fact_invoices_minimal(spark):
+    """Minimal fact_invoices-shaped rows (only the columns build_billed_daily_agg uses)."""
+    return spark.createDataFrame(
+        [
+            # (invoice_date, invoice_id, quantity, line_total, line_profit)
+            (date(2024, 6, 10), 1, 5, 115.0, 30.0),  # invoice 1, line A
+            (date(2024, 6, 10), 1, 2, 13.5, 4.5),  # invoice 1, line B
+            (date(2024, 7, 22), 2, -1, -23.0, -6.0),  # credit-note invoice (negatives)
+        ],
+        ["invoice_date", "invoice_id", "quantity", "line_total", "line_profit"],
+    )
+
+
+def test_build_billed_daily_agg_counts_distinct_invoices(spark):
+    agg = {
+        r["invoice_date"]: r
+        for r in build_billed_daily_agg(_fact_invoices_minimal(spark)).collect()
+    }
+    jun10 = agg[date(2024, 6, 10)]
+    assert jun10["num_invoices"] == 1  # one invoice with two lines
+    assert jun10["num_lines"] == 2
+    assert jun10["total_quantity"] == 5 + 2
+
+
+def test_build_billed_daily_agg_sums_revenue_and_profit(spark):
+    agg = {
+        r["invoice_date"]: r
+        for r in build_billed_daily_agg(_fact_invoices_minimal(spark)).collect()
+    }
+    jun10 = agg[date(2024, 6, 10)]
+    assert jun10["total_revenue"] == 128.5  # 115.0 + 13.5
+    assert jun10["total_profit"] == 34.5  # 30.0 + 4.5
+
+
+def test_build_billed_daily_agg_passes_through_negative_credit_notes(spark):
+    """Credit notes carry negative measures — the daily agg should NOT collapse them to zero."""
+    agg = {
+        r["invoice_date"]: r
+        for r in build_billed_daily_agg(_fact_invoices_minimal(spark)).collect()
+    }
+    jul22 = agg[date(2024, 7, 22)]
+    assert jul22["total_revenue"] == -23.0
+    assert jul22["total_profit"] == -6.0
+    assert jul22["total_quantity"] == -1

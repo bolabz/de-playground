@@ -8,9 +8,11 @@ Endpoints:
   GET /sales/search           — full-text on description + optional filters
   GET /sales/{order_line_id}  — fetch one document by id
 
-Cross-plane contract: FactSalesDoc / SalesSearchResult / SalesSearchQuery come from
-`de_playground.contracts` — the same Pydantic models the producer (load.to_elasticsearch)
-uses to validate Gold rows on the way IN to Elasticsearch (WS4).
+Cross-plane contract: FactSalesDoc, SalesSearchResult, INDEX_FACT_SALES, and the
+`build_query` helper all come from `de_playground.contracts` — the same Pydantic models
+the producer (load.to_elasticsearch) uses to validate Gold rows on the way IN to
+Elasticsearch (WS4). import-linter's `api may only import de_playground.contracts`
+contract is what keeps that the *only* cross-plane import.
 
 Run locally (outside Docker):  ES_URL=http://localhost:9200 uvicorn main:app --reload
 In the stack it runs from api/Dockerfile with ES_URL=http://elasticsearch:9200.
