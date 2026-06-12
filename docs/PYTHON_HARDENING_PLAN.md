@@ -304,7 +304,7 @@ returning `DataFrame`; we type the *edges* where structure is knowable.
 escalation tracked for after boundaries are typed; no bare `dict` on a public boundary in
 `load`/`api`.
 
-### WS5 — Testing the pure logic
+### WS5 — Testing the pure logic ✅ landed 2026-06-11
 
 The brief's testing line: *pytest fixtures/parametrize, hypothesis for properties; mock-heavy
 suites signal missing boundaries.* Apply incrementally.

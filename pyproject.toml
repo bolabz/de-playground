@@ -35,6 +35,8 @@ dev = [
     "pyright>=1.1",                 # WS4 6c — second gate (standard mode); editor-strict
     "pytest>=8.0",
     "import-linter>=2.0",           # architecture enforcement (layers/independence/forbidden)
+    "hypothesis>=6.0",              # property-based tests (WS5)
+    "pytest-cov>=5.0",              # coverage measurement (WS5); diff-cover gate is WS6
 ]
 
 [build-system]
@@ -128,6 +130,13 @@ reportAttributeAccessIssue = "warning"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# WS5: gate any test that needs Spark/JVM behind the `pyspark` marker; default CI stays
+# Java-free, an opt-in CI job (`pytest -m pyspark`) installs JDK 17 + runs them.
+markers = [
+    "pyspark: Spark-backed transform tests (needs JDK 17 + PySpark; opt-in)",
+]
+# Skip the pyspark marker by default; explicit -m pyspark in CI to run them.
+addopts = "-m 'not pyspark'"
 
 # ---- Architecture enforcement (import-linter, WS3) -------------------------------------
 # Three contracts that machine-check the layering in docs/PYTHON_HARDENING_PLAN.md

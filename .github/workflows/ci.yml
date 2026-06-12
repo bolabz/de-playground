@@ -67,3 +67,28 @@ jobs:
         with:
           args: --no-progress --verbose './**/*.md'
           fail: true
+
+  pyspark:
+    # Opt-in: runs the @pytest.mark.pyspark tests (Spark transforms) on a job that ships
+    # a JDK. Default `quality` job is Java-free; this one keeps PySpark verification
+    # honest without dragging Spark setup into every CI run.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install JDK 17 (Spark 3.5 supports Java 8/11/17 only)
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          python-version: "3.11"
+
+      - name: Install all extras (need pyspark + dev)
+        run: uv sync --all-extras --all-packages
+
+      - name: Tests (pyspark marker, opt-in)
+        run: uv run pytest -m pyspark

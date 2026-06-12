@@ -70,3 +70,22 @@ class SalesSearchResult(BaseModel):
 
     total: int
     results: list[FactSalesDoc]
+
+
+def build_query(
+    q: str | None, customer_id: int | None, min_total: float | None
+) -> dict[str, object]:
+    """Pure Elasticsearch bool-query builder for /sales/search.
+
+    Lives here (next to the models) rather than in api/main.py so both api and unit tests
+    can import it without depending on FastAPI. Used by api/main.py's /sales/search route.
+    """
+    must: list[dict[str, object]] = []
+    filt: list[dict[str, object]] = []
+    if q:
+        must.append({"multi_match": {"query": q, "fields": ["description"]}})
+    if customer_id is not None:
+        filt.append({"term": {"customer_id": customer_id}})
+    if min_total is not None:
+        filt.append({"range": {"line_total": {"gte": min_total}}})
+    return {"bool": {"must": must or [{"match_all": {}}], "filter": filt}}

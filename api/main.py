@@ -29,25 +29,13 @@ from de_playground.contracts import (
     INDEX_FACT_SALES,
     FactSalesDoc,
     SalesSearchResult,
+    build_query,
 )
 
 ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
 
 app = FastAPI(title="de-playground sales API", version="0.1.0")
 es = Elasticsearch(ES_URL)  # constructing the client doesn't connect
-
-
-def build_query(q: str | None, customer_id: int | None, min_total: float | None) -> dict:
-    """Pure query builder (unit-testable without a live ES)."""
-    must: list[dict] = []
-    filt: list[dict] = []
-    if q:
-        must.append({"multi_match": {"query": q, "fields": ["description"]}})
-    if customer_id is not None:
-        filt.append({"term": {"customer_id": customer_id}})
-    if min_total is not None:
-        filt.append({"range": {"line_total": {"gte": min_total}}})
-    return {"bool": {"must": must or [{"match_all": {}}], "filter": filt}}
 
 
 @app.get("/health")

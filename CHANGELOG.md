@@ -7,6 +7,33 @@ mark milestones rather than released versions.
 ## [Unreleased]
 
 ### Added
+- **WS5 / pure-function + hypothesis + spark-marker tests (2026-06-11):** the pure-fn
+  testing gap from BACKLOG / Finding 7 is filled. New files:
+    - `tests/test_contracts.py` — `build_query` parametrize matrix (8 combos) + hypothesis
+      property test ("any filter combination yields a structurally valid bool query");
+      Pydantic model round-trips + `extra="forbid"` enforcement; `SalesSearchQuery` limit
+      bounds.
+    - `tests/test_load.py` — `to_actions` row count preservation, ISO-string date
+      coercion, `_id` keyed to `order_line_id`, extra-field rejection, plus a hypothesis
+      property test that ids round-trip 1:1.
+    - `tests/test_verify.py` — `_build_report` OK / APPEND / DIFF status logic, no-source
+      fallback, bucket-name passthrough (via mocked settings).
+    - `tests/conftest.py` — session-scoped local-mode `spark` fixture (`local[2]`, no UI,
+      2 shuffle partitions); uses `pytest.importorskip("pyspark")` so non-Spark jobs
+      collect cleanly.
+    - `tests/test_transforms_spark.py` — first three Spark-marked tests for
+      `silver_cdc.collapse_changes` (latest-per-key, delete drops keys, change-meta
+      cols stripped). More transforms (fact_sales, fact_invoices, silver.conform) to
+      land as needed.
+  `build_query` moved from `api/main.py` into `de_playground.contracts` so it's
+  importable from `tests/` without an `api/` PYTHONPATH dance (api/main.py just
+  re-imports it). `hypothesis>=6.0` + `pytest-cov>=5.0` added to the `dev` extra (cov is
+  wired in WS6). `[tool.pytest.ini_options]` registers the `pyspark` marker and excludes
+  it from the default run via `addopts = "-m 'not pyspark'"`. New opt-in `pyspark` CI
+  job sets up JDK 17 (Temurin) and runs `pytest -m pyspark`. Default `quality` job stays
+  Java-free. Result: 35 fast tests pass + 3 deselected (Spark) by default; opt-in job
+  runs the 3 Spark tests in ~5s.
+
 - **WS4 6c / mypy --strict (scoped) + pyright standard as CI gates (2026-06-11):**
   pyproject.toml `[tool.mypy] strict = true` with scoped overrides for
   `transform.*`, `extract.source`, `extract.cdc`, `extract.verify`,
