@@ -6,6 +6,23 @@ mark milestones rather than released versions.
 
 ## [Unreleased]
 
+### Removed
+- **WS1 / dependency hygiene (2026-06-11):** dropped three spurious entries from the
+  *main* `pyproject.toml` `dependencies` array: `operators>=1.0.1` (an unrelated PyPI package
+  imported nowhere — supply-chain smell), `psutil>=7.2.2` (no imports), and `uvicorn>=0.48.0`
+  (a duplicate — uvicorn is already in the `serve` extra). Re-locked; venv reflects state.
+  `boto3-stubs~=1.43.0` kept and earmarked for typed-boundary wiring in WS4. First step of
+  `docs/PYTHON_HARDENING_PLAN.md`'s P1 series; behavior-preserving — `make regression` empty
+  vs the Gate-0 baseline.
+
+### Fixed
+- **`inspect_lake` redirect-hang (2026-06-11):** added `os._exit(0)` at end of
+  `inspect_lake.py` `__main__` block. `DeltaTable.to_pyarrow_dataset()` spawns non-daemon Rust
+  threads in delta-rs, so a redirected invocation (`uv run python -m ... silver --json > file
+  2>&1`) used to hang after writing the report — Python waits on the Rust threads. Pipe-to-
+  consumer (`| tail`/`| jq`) masked this via SIGPIPE. The new `make baseline`/`make
+  regression` oracle writes to a file before jq-stripping, so it surfaced the underlying bug.
+
 ### Changed
 - **Doc-accuracy sweep (2026-06-09):** audited all 11 tracked `.md` files programmatically
   (every `make` command cross-checked against real targets, all path refs + internal links

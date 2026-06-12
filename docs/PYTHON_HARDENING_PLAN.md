@@ -206,7 +206,7 @@ flowchart TD
 
 ## P1 workstreams
 
-### WS1 — Dependency hygiene *(do first; isolated, zero behavioral risk)*
+### WS1 — Dependency hygiene *(do first; isolated, zero behavioral risk)* ✅ landed 2026-06-11
 
 1. Remove `operators>=1.0.1` and `psutil>=7.2.2` from `pyproject.toml` `dependencies`
    (Finding 1). Re-lock (`uv lock`) and run the suite. If anything *does* use `psutil` later,

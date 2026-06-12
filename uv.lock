@@ -692,8 +692,6 @@ dependencies = [
     { name = "boto3-stubs" },
     { name = "deltalake" },
     { name = "dlt", extra = ["parquet", "s3", "sql-database"] },
-    { name = "operators" },
-    { name = "psutil" },
     { name = "pyarrow" },
     { name = "pydantic-settings" },
     { name = "pyodbc" },
@@ -732,10 +730,8 @@ requires-dist = [
     { name = "fastapi", marker = "extra == 'serve'", specifier = ">=0.111" },
     { name = "jupyterlab", marker = "extra == 'eda'", specifier = ">=4.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "operators", specifier = ">=1.0.1" },
     { name = "pandas", marker = "extra == 'eda'", specifier = ">=2.2" },
     { name = "polars", marker = "extra == 'eda'", specifier = ">=1.0" },
-    { name = "psutil", specifier = ">=7.2.2" },
     { name = "pyarrow", specifier = ">=16.0" },
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "pyodbc", specifier = ">=5.1" },
@@ -2137,15 +2133,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1a/9c/c531f2293b91265d8b48e9b329f54fdd7ffae73cb4134ea10cca4237e9cc/numpy-2.4.6-pp311-pypy311_pp73-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:5dbbdb29840ca3d91ee0fece42fc29278886d908280bfec0a5846c6f901a3eb0", size = 15798374, upload-time = "2026-05-18T23:37:02.674Z" },
     { url = "https://files.pythonhosted.org/packages/1a/b0/413077f6b1153ed3cba361401c6783bbad6114804a000cc22eb71c13e190/numpy-2.4.6-pp311-pypy311_pp73-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8ad03c0965fb3c692200e74d458ca28c1dbb4ce96f9a479a8aa041ad5fabca02", size = 16747286, upload-time = "2026-05-18T23:37:06.327Z" },
     { url = "https://files.pythonhosted.org/packages/15/ce/e5ec180bc41812edcd8daeb8639d205622c0e8c02259d8ab25a0201b3c2a/numpy-2.4.6-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:2803abfebfc990042cd494d8ce2d5f82e9d847af6d35ec486923aa19dbad5e73", size = 12504263, upload-time = "2026-05-18T23:37:09.715Z" },
-]
-
-[[package]]
-name = "operators"
-version = "1.0.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/12/15/d9d6d897ea63682709906b43ae5d3dd6a6b5e84ab8cc576af2d2bd292448/operators-1.0.1.tar.gz", hash = "sha256:6f6add5704ddde84e6bbc3176d0eb323b56c4fcde375d0f3228be2d19acc50a6", size = 1482, upload-time = "2022-01-29T18:52:19.714Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/41/2f/7b8d8405193986ea19d158b2b38b231d5955c423f318cb0ad8a307a46853/operators-1.0.1-py3-none-any.whl", hash = "sha256:dc066c63c4ceb8f40f46618e7a251b4876725661f728c277b2eee4a09d6a9a91", size = 1829, upload-time = "2022-01-29T18:52:17.445Z" },
 ]
 
 [[package]]
