@@ -20,6 +20,10 @@ dependencies = [
     # to_elasticsearch.py imports `elasticsearch` directly; the api/ workspace member also
     # declares it, but it's needed in the core lib for `make index` / WS5 test imports.
     "elasticsearch>=8.14,<9",       # match the ES server major
+    # ---- transitive bumps for security ------------------------------------------------
+    # aiohttp <3.14 — CVE-2026-34993, CVE-2026-47265. Pulled in by fsspec/dlt via
+    # aiobotocore; force the floor so pip-audit stays green.
+    "aiohttp>=3.14.0",
 ]
 
 [project.optional-dependencies]
