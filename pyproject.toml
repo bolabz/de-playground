@@ -30,7 +30,7 @@ dependencies = [
 # Heavy/optional planes kept separate so `uv sync` stays light per phase.
 process = [
     "pyspark==3.5.8",               # transforms Bronze->Silver->Gold (needs a JDK 17 on host)
-    "delta-spark==3.2.1",           # Delta 3.2 pairs with Spark 3.5; pulls the matching jar
+    "delta-spark==4.2.0",           # Delta 3.2 pairs with Spark 3.5; pulls the matching jar
 ]
 eda = [
     "pandas>=2.2",                  # edges only: EDA samples + last-mile QA
