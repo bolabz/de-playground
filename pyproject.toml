@@ -29,7 +29,7 @@ dependencies = [
 [project.optional-dependencies]
 # Heavy/optional planes kept separate so `uv sync` stays light per phase.
 process = [
-    "pyspark==3.5.8",               # transforms Bronze->Silver->Gold (needs a JDK 17 on host)
+    "pyspark==4.1.2",               # transforms Bronze->Silver->Gold (needs a JDK 17 on host)
     "delta-spark==3.2.1",           # Delta 3.2 pairs with Spark 3.5; pulls the matching jar
 ]
 eda = [
