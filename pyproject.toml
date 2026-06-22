@@ -35,7 +35,7 @@ process = [
 eda = [
     "pandas>=2.2",                  # edges only: EDA samples + last-mile QA
     "polars>=1.0",                  # fast single-machine alternative
-    "jupyterlab>=4.0",
+    "jupyterlab>=4.5.9",
 ]
 dev = [
     "ruff>=0.5",                    # lint + format (replaces flake8/black/isort)
