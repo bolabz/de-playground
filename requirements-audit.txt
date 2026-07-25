@@ -493,7 +493,7 @@ semver==3.0.4
     # via dlt
 send2trash==2.1.0
     # via jupyter-server
-setuptools==82.0.1
+setuptools==83.0.0
     # via
     #   dlt
     #   jupyterlab
