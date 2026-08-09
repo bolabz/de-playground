@@ -127,7 +127,7 @@ fsspec==2026.4.0
     #   s3fs
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.50
+gitpython==3.1.58
     # via dlt
 giturlparse==0.14.0
     # via dlt
